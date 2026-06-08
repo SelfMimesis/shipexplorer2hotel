@@ -352,8 +352,11 @@
     const popupState = document.querySelector("#popupState");
     const logs = document.querySelector("#logs");
 
+    const RENDER_WS_URL = "wss://shipexplorer2.onrender.com/ws";
     const protocol = location.protocol === "https:" ? "wss" : "ws";
-    const wsUrl = protocol + "://" + location.host + "/ws";
+    const sameHostWsUrl = protocol + "://" + location.host + "/ws";
+    const querySocketUrl = new URLSearchParams(location.search).get("socketUrl");
+    const wsUrl = querySocketUrl || (location.hostname.endsWith(".github.io") ? RENDER_WS_URL : sameHostWsUrl);
 
     let socket = null;
     let reconnectTimer = 0;
