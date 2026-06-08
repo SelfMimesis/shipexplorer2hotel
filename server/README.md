@@ -8,7 +8,17 @@ Backend Node.js para controlar popups remotos de ShipExplorer mediante WebSocket
 - Express
 - ws
 - Sin base de datos
-- Controller HTML/CSS/JS vanilla servido en `GET /controller.html`
+- Controller HTML/CSS/JS vanilla en `controller.html`, servido en `GET /controller.html`
+
+## Estructura
+
+```text
+server/
+├─ package.json
+├─ server.js
+├─ controller.html
+├─ README.md
+```
 
 ## Instalacion Local
 
@@ -111,7 +121,7 @@ Respuesta:
 
 ### GET /controller.html
 
-Sirve una pagina HTML simple para controlar el popup.
+Sirve `controller.html`, una pagina HTML simple para controlar el popup.
 
 ## WebSocket
 

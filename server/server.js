@@ -1,5 +1,6 @@
 const crypto = require("crypto");
 const http = require("http");
+const path = require("path");
 const express = require("express");
 const { WebSocketServer, WebSocket } = require("ws");
 
@@ -67,7 +68,7 @@ app.get("/state", (req, res) => {
 });
 
 app.get("/controller.html", (req, res) => {
-  res.type("html").send(CONTROLLER_HTML);
+  res.sendFile(path.join(__dirname, "controller.html"));
 });
 
 app.use((req, res) => {
