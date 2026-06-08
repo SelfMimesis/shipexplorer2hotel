@@ -18,5 +18,13 @@
     </main>
     <noscript>Este juego necesita JavaScript para funcionar.</noscript>
     <script type="module" src="./src/main.js"></script>
+    <script src="./popup-client.js"></script>
+    <script>
+      window.ShipExplorerPopupClient.init({
+        socketUrl: "wss://TU-SERVICIO.onrender.com/ws",
+        theme: "ship",
+        showCloseButton: true
+      });
+    </script>
   </body>
 </html>

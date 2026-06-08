@@ -36,6 +36,7 @@
   var messageNode = null;
   var closeButton = null;
   var styleInjected = false;
+  var lastConnectionWarningAt = 0;
 
   function init(userOptions) {
     options = mergeOptions(DEFAULT_OPTIONS, userOptions || {});
@@ -76,6 +77,7 @@
       socket = new WebSocket(options.socketUrl);
     } catch (error) {
       setConnectionState("error", error.message || "WebSocket connection failed.");
+      warnConnectionIssue(state.lastError);
       scheduleReconnect();
       return;
     }
@@ -119,6 +121,7 @@
     if (event && event.target !== socket) return;
 
     setConnectionState("error", "WebSocket error.");
+    warnConnectionIssue("WebSocket connection failed. Retrying in background.");
   }
 
   function scheduleReconnect() {
@@ -330,6 +333,16 @@
   function setConnectionState(nextState, errorMessage) {
     state.connectionState = nextState;
     state.lastError = errorMessage || "";
+  }
+
+  function warnConnectionIssue(message) {
+    var now = Date.now();
+    if (now - lastConnectionWarningAt < 30000) return;
+    lastConnectionWarningAt = now;
+
+    if (window.console && typeof window.console.warn === "function") {
+      window.console.warn("ShipExplorerPopupClient:", message || "Popup backend unavailable.");
+    }
   }
 
   function parseJson(raw) {
