@@ -12,7 +12,14 @@ const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "";
 const NODE_ENV = process.env.NODE_ENV || "development";
 const MAX_POPUP_MESSAGE_LENGTH = 240;
 const MAX_WS_PAYLOAD_BYTES = 2048;
+const MAX_WS_FRAME_BYTES = 4096;
 const STATE_PATH = path.join(__dirname, "state.json");
+const DEV_ALLOWED_ORIGINS = [
+  "http://localhost:8080",
+  "http://127.0.0.1:8080",
+  "http://localhost:5500",
+  "http://127.0.0.1:5500",
+];
 const COMMAND_RATE_LIMIT = {
   windowMs: 60 * 1000,
   max: 20,
@@ -28,6 +35,7 @@ if (!ADMIN_TOKEN) {
 }
 
 const allowedOrigins = parseAllowedOrigins(process.env.ALLOWED_ORIGINS || "");
+const allowedOriginSet = new Set([...allowedOrigins, ...(NODE_ENV === "development" ? DEV_ALLOWED_ORIGINS : [])]);
 let popupState = createDefaultPopupState();
 let saveQueue = Promise.resolve();
 
@@ -35,17 +43,19 @@ const app = express();
 app.disable("x-powered-by");
 
 app.use((req, res, next) => {
+  if (!isCorsEndpoint(req.path)) {
+    return next();
+  }
+
   const origin = req.headers.origin;
 
   if (origin) {
-    if (!isOriginAllowed(origin, req)) {
+    if (!isHttpOriginAllowed(origin)) {
       return res.status(403).json({ ok: false, error: "Origin not allowed" });
     }
 
     res.setHeader("Access-Control-Allow-Origin", normalizeOrigin(origin));
     res.setHeader("Vary", "Origin");
-  } else if (allowedOrigins.length === 0) {
-    res.setHeader("Access-Control-Allow-Origin", "*");
   }
 
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
@@ -77,7 +87,7 @@ app.use((req, res) => {
 const server = http.createServer(app);
 const wss = new WebSocketServer({
   noServer: true,
-  maxPayload: MAX_WS_PAYLOAD_BYTES,
+  maxPayload: MAX_WS_FRAME_BYTES,
 });
 
 const clients = new Set();
@@ -92,7 +102,7 @@ server.on("upgrade", (req, socket, head) => {
     return;
   }
 
-  if (!isOriginAllowed(req.headers.origin, req)) {
+  if (!isWebSocketOriginAllowed(req.headers.origin)) {
     socket.write("HTTP/1.1 403 Forbidden\r\n\r\n");
     socket.destroy();
     return;
@@ -159,13 +169,13 @@ startServer().catch((error) => {
 
 function handleWsMessage(client, data, isBinary) {
   if (isBinary) {
-    sendError(client.ws, "Binary messages are not supported.");
+    sendError(client.ws, "BAD_REQUEST", "Mensaje inválido");
     return;
   }
 
   const raw = data.toString("utf8");
   if (Buffer.byteLength(raw, "utf8") > MAX_WS_PAYLOAD_BYTES) {
-    sendError(client.ws, "Message payload is too large.");
+    sendError(client.ws, "BAD_REQUEST", "Mensaje inválido");
     return;
   }
 
@@ -173,12 +183,12 @@ function handleWsMessage(client, data, isBinary) {
   try {
     payload = JSON.parse(raw);
   } catch {
-    sendError(client.ws, "Malformed JSON message.");
+    sendError(client.ws, "BAD_REQUEST", "Mensaje inválido");
     return;
   }
 
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
-    sendError(client.ws, "WebSocket message must be a JSON object.");
+    sendError(client.ws, "BAD_REQUEST", "Mensaje inválido");
     return;
   }
 
@@ -193,34 +203,34 @@ function handleWsMessage(client, data, isBinary) {
   }
 
   if (payload.type !== "popup:show" && payload.type !== "popup:hide") {
-    sendError(client.ws, "Unsupported message type.");
+    sendError(client.ws, "BAD_REQUEST", "Mensaje inválido");
     return;
   }
 
   if (!checkCommandRateLimit(client.ip)) {
-    sendError(client.ws, "Rate limit exceeded. Please wait before sending another command.");
+    sendError(client.ws, "RATE_LIMIT", "Demasiados comandos");
     return;
   }
 
   if (!isValidAdminToken(payload.token)) {
-    sendError(client.ws, "Invalid admin token.");
+    sendError(client.ws, "UNAUTHORIZED", "Token inválido");
     return;
   }
 
   if (payload.type === "popup:show") {
     if (typeof payload.message !== "string") {
-      sendError(client.ws, "Popup message must be a string.");
+      sendError(client.ws, "BAD_REQUEST", "Mensaje inválido");
       return;
     }
 
     if ([...payload.message].length > MAX_POPUP_MESSAGE_LENGTH) {
-      sendError(client.ws, `Popup message must be ${MAX_POPUP_MESSAGE_LENGTH} characters or fewer.`);
+      sendError(client.ws, "BAD_REQUEST", "Mensaje inválido");
       return;
     }
 
     const message = sanitizePopupMessage(payload.message);
     if (!message) {
-      sendError(client.ws, "Popup message cannot be empty.");
+      sendError(client.ws, "BAD_REQUEST", "Mensaje inválido");
       return;
     }
 
@@ -368,8 +378,8 @@ function sendJson(ws, payload) {
   ws.send(JSON.stringify(payload));
 }
 
-function sendError(ws, message) {
-  sendJson(ws, { type: "error", message });
+function sendError(ws, code, message) {
+  sendJson(ws, { type: "error", code, message });
 }
 
 function sanitizePopupMessage(message) {
@@ -431,18 +441,19 @@ function normalizeOrigin(origin) {
   }
 }
 
-function isOriginAllowed(origin, req) {
-  if (!origin) return true;
+function isCorsEndpoint(requestPath) {
+  return requestPath === "/health" || requestPath === "/state";
+}
 
+function isHttpOriginAllowed(origin) {
   const normalizedOrigin = normalizeOrigin(origin);
-  if (!normalizedOrigin) return false;
+  return Boolean(normalizedOrigin && allowedOriginSet.has(normalizedOrigin));
+}
 
-  const host = req.headers.host;
-  const sameServiceOrigins = host ? [`http://${host}`, `https://${host}`] : [];
-  if (sameServiceOrigins.includes(normalizedOrigin)) return true;
-
-  if (allowedOrigins.length === 0) return true;
-  return allowedOrigins.includes(normalizedOrigin);
+function isWebSocketOriginAllowed(origin) {
+  if (!origin) return NODE_ENV === "development";
+  const normalizedOrigin = normalizeOrigin(origin);
+  return Boolean(normalizedOrigin && allowedOriginSet.has(normalizedOrigin));
 }
 
 const CONTROLLER_HTML = `<!doctype html>

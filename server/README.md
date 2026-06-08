@@ -60,10 +60,21 @@ Token secreto para mandar comandos desde el controller. No se expone nunca desde
 Lista de origenes permitidos separados por coma. Ejemplo:
 
 ```text
-https://selfmimesis.github.io,https://shipexplorer.com
+https://selfmimesis.github.io,https://selfmimesis.github.io/shipexplorer,https://TU-SERVICIO.onrender.com
 ```
 
-Si esta vacio, el servidor acepta cualquier origen. La pagina `controller.html` servida desde el mismo backend se permite siempre.
+El servidor normaliza cada entrada al origen real (`protocolo://host`). En produccion, los requests HTTP con `Origin` y los WebSocket con `Origin` solo se aceptan si estan en esta lista.
+
+En desarrollo tambien se permiten:
+
+```text
+http://localhost:8080
+http://127.0.0.1:8080
+http://localhost:5500
+http://127.0.0.1:5500
+```
+
+Las conexiones WebSocket sin header `Origin` solo se permiten en desarrollo.
 
 `NODE_ENV`
 
@@ -96,7 +107,7 @@ Start Command: npm start
 ```text
 NODE_ENV=production
 ADMIN_TOKEN=<token-secreto-largo>
-ALLOWED_ORIGINS=https://selfmimesis.github.io
+ALLOWED_ORIGINS=https://selfmimesis.github.io,https://TU-SERVICIO.onrender.com
 ```
 
 5. Despliega.
