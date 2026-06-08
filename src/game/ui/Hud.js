@@ -54,7 +54,7 @@ export class Hud {
   }
 
   drawMainFrame(ctx, game) {
-    drawRect(ctx, PLAYFIELD.left, PLAYFIELD.top, PLAYFIELD.right - PLAYFIELD.left, PLAYFIELD.bottom - PLAYFIELD.top, COLORS.cyan, "rgba(24, 27, 28, 0.42)", 1);
+    drawRect(ctx, PLAYFIELD.left, PLAYFIELD.top, PLAYFIELD.right - PLAYFIELD.left, PLAYFIELD.bottom - PLAYFIELD.top, COLORS.cyan, "rgba(24, 27, 28, 0.08)", 1);
     drawRect(ctx, PLAYFIELD.left - 10, PLAYFIELD.top - 10, PLAYFIELD.right - PLAYFIELD.left + 20, PLAYFIELD.bottom - PLAYFIELD.top + 20, COLORS.cyanDim, null, 1, 0.9);
 
     this.drawFrameGlow(ctx);

@@ -10,11 +10,13 @@ import {
   PLAYFIELD,
 } from "./constants.js";
 import { clamp, drawPixelLine, drawRing, drawText, lerp, screenToCanvasPoint, withAlpha } from "./utils.js";
+import { BackgroundHudSystem } from "./systems/BackgroundHudSystem.js";
 import { FloatingTextSystem } from "./systems/FloatingTextSystem.js";
 import { ParticleSystem } from "./systems/ParticleSystem.js";
 import { ShockwaveSystem } from "./systems/ShockwaveSystem.js";
 import { DIFFICULTIES, SpawnSystem } from "./systems/SpawnSystem.js";
 import { Hud } from "./ui/Hud.js";
+import { Menu } from "./ui/Menu.js";
 
 const SHIP_RADIUS = 24;
 
@@ -42,7 +44,18 @@ export class Game {
     this.activeDirection = null;
 
     this.reducedMotion = this.getReducedMotionPreference();
+    this.settings = {
+      crtScanlines: true,
+      screenShake: true,
+      reducedMotion: this.reducedMotion,
+      highContrast: false,
+      audio: true,
+    };
+    this.settingsBackState = GAME_STATES.TITLE;
+    this.shakeTimer = 0;
+    this.background = new BackgroundHudSystem({ reducedMotion: this.reducedMotion });
     this.hud = new Hud();
+    this.menu = new Menu();
     this.difficulty = "NORMAL";
     this.spawn = new SpawnSystem(this.difficulty);
     this.particles = new ParticleSystem({ reducedMotion: this.reducedMotion });
@@ -78,6 +91,8 @@ export class Game {
     const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
     const applyPreference = () => {
       this.reducedMotion = mediaQuery.matches;
+      this.settings.reducedMotion = this.reducedMotion;
+      this.background.setReducedMotion(this.reducedMotion);
       this.particles.setReducedMotion(this.reducedMotion);
       this.shockwaves.setReducedMotion(this.reducedMotion);
       this.floatingText.setReducedMotion(this.reducedMotion);
@@ -171,7 +186,11 @@ export class Game {
 
     window.addEventListener("keydown", (event) => {
       if (event.key === "Escape") {
-        this.togglePause();
+        if (this.state === GAME_STATES.SETTINGS) {
+          this.closeSettings();
+        } else {
+          this.togglePause();
+        }
         return;
       }
 
@@ -218,6 +237,30 @@ export class Game {
     this.spawn.difficulty = difficulty;
   }
 
+  cycleDifficulty() {
+    const order = ["CALM", "NORMAL", "OVERCLOCK"];
+    const index = order.indexOf(this.difficulty);
+    this.setDifficulty(order[(index + 1) % order.length]);
+  }
+
+  toggleSetting(key) {
+    if (!(key in this.settings)) return;
+    this.settings[key] = !this.settings[key];
+
+    if (key === "reducedMotion") {
+      this.setReducedMotion(this.settings.reducedMotion);
+    }
+  }
+
+  setReducedMotion(value) {
+    this.reducedMotion = Boolean(value);
+    this.settings.reducedMotion = this.reducedMotion;
+    this.background.setReducedMotion(this.reducedMotion);
+    this.particles.setReducedMotion(this.reducedMotion);
+    this.shockwaves.setReducedMotion(this.reducedMotion);
+    this.floatingText.setReducedMotion(this.reducedMotion);
+  }
+
   resetRun() {
     this.score = 0;
     this.combo = 0;
@@ -234,6 +277,7 @@ export class Game {
     this.gameOverReason = "RUN COMPLETE";
     this.ship = this.createShip();
     this.spawn.reset(this.difficulty);
+    this.background.reset();
     this.particles.reset();
     this.shockwaves.reset();
     this.floatingText.reset();
@@ -246,6 +290,27 @@ export class Game {
 
   restartRun() {
     this.startRun();
+  }
+
+  resumeRun() {
+    this.changeState(GAME_STATES.PLAYING);
+  }
+
+  openSettings(backState = this.state) {
+    this.settingsBackState = backState;
+    this.changeState(GAME_STATES.SETTINGS);
+  }
+
+  closeSettings() {
+    this.changeState(this.settingsBackState);
+  }
+
+  toTitle() {
+    this.spawn.reset(this.difficulty);
+    this.particles.reset();
+    this.shockwaves.reset();
+    this.floatingText.reset();
+    this.changeState(GAME_STATES.TITLE);
   }
 
   togglePause() {
@@ -265,10 +330,19 @@ export class Game {
     this.totalTime += dt;
     this.stateTime += dt;
     this.ctx.imageSmoothingEnabled = false;
+    this.background.update(dt, this);
     this.hud.update(dt, this);
+    this.menu.update(dt, this);
     this.particles.update(dt);
     this.shockwaves.update(dt);
     this.floatingText.update(dt);
+    this.shakeTimer = Math.max(0, this.shakeTimer - dt);
+
+    if (this.pointer.justPressed && this.handleMenuPointer()) {
+      this.pointer.justPressed = false;
+      this.pointer.justReleased = false;
+      return;
+    }
 
     if (this.state === GAME_STATES.BOOT) {
       this.updateBoot();
@@ -291,7 +365,6 @@ export class Game {
 
   updateTitle(dt) {
     this.updateShip(dt);
-    if (this.pointer.justPressed) this.startRun();
   }
 
   updatePlaying(dt) {
@@ -310,7 +383,11 @@ export class Game {
 
   updateGameOver(dt) {
     this.updateShip(dt * 0.45);
-    if (this.pointer.justPressed) this.restartRun();
+  }
+
+  handleMenuPointer() {
+    if (![GAME_STATES.TITLE, GAME_STATES.PAUSED, GAME_STATES.SETTINGS, GAME_STATES.GAME_OVER].includes(this.state)) return false;
+    return this.menu.handlePointer(this, this.pointer.x, this.pointer.y);
   }
 
   resolveBubbleClick(x, y) {
@@ -349,12 +426,19 @@ export class Game {
     this.particles.emitMiss(this.pointer.x, this.pointer.y);
     this.shockwaves.add(this.pointer.x, this.pointer.y, COLORS.red, 36);
     this.floatingText.add("MISS", this.pointer.x, this.pointer.y - 26, COLORS.red, 18, { life: 0.42, glitch: true });
+    this.addShake(0.08);
   }
 
   emitPopFeedback(bubble, gained) {
     this.particles.emitPop(bubble.x, bubble.y, bubble.type, gained);
     this.shockwaves.emitPop(bubble.x, bubble.y, bubble.type);
     this.floatingText.emitPop(bubble.x, bubble.y, gained, bubble.type, this.multiplier);
+    if (bubble.type === "unstable") {
+      this.background.emitUnstableGlitch(1);
+      this.addShake(0.18);
+    } else if (bubble.type === "bonus") {
+      this.addShake(0.1);
+    }
   }
 
   getComboMultiplier() {
@@ -375,6 +459,21 @@ export class Game {
     this.particles.emitPop(bubble.x, bubble.y, "unstable", bubble.value);
     this.shockwaves.emitPop(bubble.x, bubble.y, "unstable");
     this.floatingText.add("LEAK", bubble.x, bubble.y - 42, COLORS.red, 20, { life: 0.7, glitch: true });
+    this.background.emitUnstableGlitch(1.2);
+    this.addShake(0.22);
+  }
+
+  addShake(amount) {
+    if (!this.settings.screenShake || this.reducedMotion) return;
+    this.shakeTimer = Math.max(this.shakeTimer, amount);
+  }
+
+  getGrade() {
+    const scoreGrade = this.score >= 8000 ? 3 : this.score >= 5200 ? 2 : this.score >= 2600 ? 1 : 0;
+    const accuracyBonus = this.accuracy >= 0.92 ? 1 : 0;
+    const comboBonus = this.maxCombo >= 18 ? 1 : 0;
+    const grade = Math.min(3, scoreGrade + accuracyBonus + comboBonus);
+    return ["C", "B", "A", "S"][grade];
   }
 
   getDirectionVector() {
@@ -489,15 +588,20 @@ export class Game {
     ctx.save();
     ctx.imageSmoothingEnabled = false;
 
-    this.hud.drawBackground(ctx, this);
-    this.hud.drawMainFrame(ctx, this);
+    if (this.settings.screenShake && this.shakeTimer > 0) {
+      const power = this.shakeTimer * 20;
+      ctx.translate(Math.round(Math.sin(this.totalTime * 90) * power), Math.round(Math.cos(this.totalTime * 77) * power));
+    }
+
+    this.background.render(ctx, this);
     this.spawn.draw(ctx, this.totalTime);
     this.shockwaves.render(ctx);
     this.particles.render(ctx);
     this.drawShip(interpolation);
     this.floatingText.render(ctx);
+    this.hud.drawMainFrame(ctx, this);
     this.hud.drawPanels(ctx, this);
-    this.hud.drawOverlay(ctx, this);
+    this.menu.render(ctx, this);
     this.hud.drawCursor(ctx, this);
 
     ctx.restore();
