@@ -60,7 +60,7 @@ Token secreto para mandar comandos desde el controller. No se expone nunca desde
 Lista de origenes permitidos separados por coma. Ejemplo:
 
 ```text
-https://selfmimesis.github.io,https://selfmimesis.github.io/shipexplorer,https://TU-SERVICIO.onrender.com
+https://selfmimesis.github.io,https://selfmimesis.github.io/shipexplorer,https://shipexplorer2.onrender.com
 ```
 
 El servidor normaliza cada entrada al origen real (`protocolo://host`). En produccion, los requests HTTP con `Origin` y los WebSocket con `Origin` solo se aceptan si estan en esta lista.
@@ -107,7 +107,7 @@ Start Command: npm start
 ```text
 NODE_ENV=production
 ADMIN_TOKEN=<token-secreto-largo>
-ALLOWED_ORIGINS=https://selfmimesis.github.io,https://TU-SERVICIO.onrender.com
+ALLOWED_ORIGINS=https://selfmimesis.github.io,https://shipexplorer2.onrender.com
 ```
 
 5. Despliega.
@@ -133,6 +133,10 @@ Respuesta:
 {
   "popupVisible": false,
   "popupMessage": "",
+  "title": "",
+  "variant": "info",
+  "durationMs": 0,
+  "dismissible": true,
   "updatedAt": "2026-06-08T12:00:00.000Z"
 }
 ```
@@ -152,7 +156,7 @@ Ruta:
 En produccion usa:
 
 ```text
-wss://TU-SERVICIO.onrender.com/ws
+wss://shipexplorer2.onrender.com/ws
 ```
 
 Los viewers de ShipExplorer se conectan a `/ws` y reciben el estado actual inmediatamente.
@@ -171,9 +175,15 @@ Mensaje enviado por el controller para mostrar popup:
 {
   "type": "popup:show",
   "token": "...",
-  "message": "Texto del popup"
+  "message": "Texto del popup",
+  "title": "Aviso",
+  "variant": "info",
+  "durationMs": 0,
+  "dismissible": true
 }
 ```
+
+`title` es opcional. `variant` acepta `info`, `warning`, `danger` o `success`. `durationMs: 0` deja el popup visible hasta ocultarlo; si es mayor que `0`, el cliente lo oculta localmente despues de ese tiempo. `dismissible` controla si aparece el cierre local.
 
 Mensaje enviado por el controller para ocultar popup:
 
@@ -191,6 +201,10 @@ Mensaje retransmitido a viewers:
   "type": "popup:update",
   "popupVisible": true,
   "popupMessage": "Texto del popup",
+  "title": "Aviso",
+  "variant": "info",
+  "durationMs": 0,
+  "dismissible": true,
   "updatedAt": "2026-06-08T12:00:00.000Z"
 }
 ```
@@ -200,7 +214,8 @@ Errores enviados al cliente que mando el comando:
 ```json
 {
   "type": "error",
-  "message": "Invalid admin token."
+  "code": "UNAUTHORIZED",
+  "message": "Token invalido"
 }
 ```
 
@@ -208,7 +223,7 @@ Errores enviados al cliente que mando el comando:
 
 ```html
 <script>
-  const socket = new WebSocket("wss://TU-SERVICIO.onrender.com/ws");
+  const socket = new WebSocket("wss://shipexplorer2.onrender.com/ws");
 
   socket.addEventListener("message", (event) => {
     const data = JSON.parse(event.data);
@@ -233,5 +248,7 @@ Errores enviados al cliente que mando el comando:
 - Mensajes WebSocket binarios o mal formados son rechazados.
 - Payload WebSocket limitado.
 - Texto del popup limitado a 240 caracteres.
+- Titulo limitado a 80 caracteres.
+- `variant`, `durationMs` y `dismissible` validados en servidor.
 - Texto sanitizado antes de actualizar el estado global.
-- Sin base de datos: el estado vive en memoria y se reinicia al reiniciar el proceso.
+- Sin base de datos: el estado se guarda en `state.json`.

@@ -21,6 +21,10 @@
     socketUrl: "",
     popupVisible: false,
     popupMessage: "",
+    title: "",
+    variant: "info",
+    durationMs: 0,
+    dismissible: true,
     updatedAt: "",
     localHidden: false,
     reconnectAttempt: 0,
@@ -32,7 +36,9 @@
   var reconnectTimer = 0;
   var manuallyClosed = false;
   var currentServerKey = "";
+  var autoHideTimer = 0;
   var overlay = null;
+  var titleNode = null;
   var messageNode = null;
   var closeButton = null;
   var styleInjected = false;
@@ -142,8 +148,12 @@
   function applyPopupUpdate(payload) {
     var visible = Boolean(payload.popupVisible);
     var message = typeof payload.popupMessage === "string" ? payload.popupMessage : "";
+    var title = typeof payload.title === "string" ? payload.title : "";
+    var variant = normalizeVariant(payload.variant);
+    var durationMs = normalizeDuration(payload.durationMs);
+    var dismissible = payload.dismissible !== false;
     var updatedAt = typeof payload.updatedAt === "string" ? payload.updatedAt : "";
-    var nextKey = [visible ? "1" : "0", updatedAt, message].join("|");
+    var nextKey = [visible ? "1" : "0", updatedAt, message, title, variant, durationMs, dismissible ? "1" : "0"].join("|");
     var isNewServerPopup = nextKey !== currentServerKey;
 
     if (isNewServerPopup) {
@@ -153,16 +163,27 @@
 
     state.popupVisible = visible;
     state.popupMessage = message;
+    state.title = title;
+    state.variant = variant;
+    state.durationMs = durationMs;
+    state.dismissible = dismissible;
     state.updatedAt = updatedAt;
 
     if (!visible) {
       state.localHidden = false;
+      clearAutoHideTimer();
       hidePopupDom();
       return;
     }
 
     if (!state.localHidden) {
-      showPopupDom(message);
+      showPopupDom({
+        message: message,
+        title: title,
+        variant: variant,
+        durationMs: durationMs,
+        dismissible: dismissible,
+      });
     }
   }
 
@@ -170,17 +191,28 @@
     state.localHidden = false;
     state.popupVisible = true;
     state.popupMessage = typeof message === "string" ? message : String(message || "");
+    state.title = "";
+    state.variant = "info";
+    state.durationMs = 0;
+    state.dismissible = true;
 
     whenReady(function () {
       injectStyles();
       createPopupDom();
       applyTheme();
-      showPopupDom(state.popupMessage);
+      showPopupDom({
+        message: state.popupMessage,
+        title: state.title,
+        variant: state.variant,
+        durationMs: state.durationMs,
+        dismissible: state.dismissible,
+      });
     });
   }
 
   function hideLocal() {
     state.localHidden = true;
+    clearAutoHideTimer();
     hidePopupDom();
   }
 
@@ -191,6 +223,10 @@
       socketUrl: state.socketUrl,
       popupVisible: state.popupVisible,
       popupMessage: state.popupMessage,
+      title: state.title,
+      variant: state.variant,
+      durationMs: state.durationMs,
+      dismissible: state.dismissible,
       updatedAt: state.updatedAt,
       localHidden: state.localHidden,
       reconnectAttempt: state.reconnectAttempt,
@@ -248,6 +284,9 @@
     label.className = "shipexplorer-popup-label";
     label.textContent = "SHIP EXPLORER";
 
+    titleNode = document.createElement("div");
+    titleNode.className = "shipexplorer-popup-title";
+
     messageNode = document.createElement("div");
     messageNode.className = "shipexplorer-popup-message";
 
@@ -259,19 +298,20 @@
 
     panel.appendChild(rail);
     panel.appendChild(label);
+    panel.appendChild(titleNode);
     panel.appendChild(messageNode);
     panel.appendChild(closeButton);
     overlay.appendChild(panel);
     document.body.appendChild(overlay);
 
     overlay.addEventListener("click", function (event) {
-      if (event.target === overlay && options.showCloseButton) {
+      if (event.target === overlay && options.showCloseButton && state.dismissible) {
         hideLocal();
       }
     });
 
     document.addEventListener("keydown", function (event) {
-      if (event.key === "Escape" && overlay && !overlay.hidden && options.showCloseButton) {
+      if (event.key === "Escape" && overlay && !overlay.hidden && options.showCloseButton && state.dismissible) {
         hideLocal();
       }
     });
@@ -280,12 +320,26 @@
   function showPopupDom(message) {
     if (!overlay) return;
 
-    messageNode.textContent = message || "";
-    closeButton.hidden = !options.showCloseButton;
+    var popup = typeof message === "object" && message ? message : { message: message };
+    var effectiveDismissible = options.showCloseButton && popup.dismissible !== false;
+
+    clearAutoHideTimer();
+    titleNode.textContent = popup.title || "";
+    titleNode.hidden = !popup.title;
+    messageNode.textContent = popup.message || "";
+    closeButton.hidden = !effectiveDismissible;
     overlay.style.zIndex = String(options.zIndex);
     overlay.hidden = false;
     overlay.classList.add("shipexplorer-popup-visible");
     applyTheme();
+    applyVariant(normalizeVariant(popup.variant));
+
+    var durationMs = normalizeDuration(popup.durationMs);
+    if (durationMs > 0) {
+      autoHideTimer = window.setTimeout(function () {
+        hideLocal();
+      }, durationMs);
+    }
   }
 
   function hidePopupDom() {
@@ -302,6 +356,18 @@
     overlay.classList.add("shipexplorer-popup-theme-" + options.theme);
   }
 
+  function applyVariant(variant) {
+    if (!overlay) return;
+
+    overlay.classList.remove(
+      "shipexplorer-popup-variant-info",
+      "shipexplorer-popup-variant-warning",
+      "shipexplorer-popup-variant-danger",
+      "shipexplorer-popup-variant-success"
+    );
+    overlay.classList.add("shipexplorer-popup-variant-" + normalizeVariant(variant));
+  }
+
   function injectStyles() {
     if (styleInjected || document.getElementById("shipexplorer-popup-styles")) return;
 
@@ -315,6 +381,7 @@
       ".shipexplorer-popup-panel:before{content:'';position:absolute;inset:10px;border:1px solid var(--shipexplorer-popup-inner);pointer-events:none;}",
       ".shipexplorer-popup-rail{position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--shipexplorer-popup-accent);box-shadow:0 0 18px var(--shipexplorer-popup-accent);}",
       ".shipexplorer-popup-label{position:relative;margin:0 0 18px;color:var(--shipexplorer-popup-muted);font-size:12px;letter-spacing:.16em;text-transform:uppercase;}",
+      ".shipexplorer-popup-title{position:relative;margin:0 0 6px;color:var(--shipexplorer-popup-accent);font-size:clamp(15px,2vw,20px);line-height:1.25;letter-spacing:.08em;text-align:center;text-transform:uppercase;}",
       ".shipexplorer-popup-message{position:relative;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--shipexplorer-popup-text);font-size:clamp(20px,3vw,32px);line-height:1.28;letter-spacing:0;text-align:center;padding:12px 8px 20px;}",
       ".shipexplorer-popup-close{position:relative;display:block;margin:8px auto 0;min-height:38px;border:1px solid var(--shipexplorer-popup-line);background:transparent;color:var(--shipexplorer-popup-text);font:inherit;font-size:13px;letter-spacing:.1em;text-transform:uppercase;padding:9px 15px;cursor:pointer;}",
       ".shipexplorer-popup-close:hover{border-color:var(--shipexplorer-popup-accent);color:var(--shipexplorer-popup-accent);}",
@@ -323,6 +390,10 @@
       ".shipexplorer-popup-theme-ship{--shipexplorer-popup-panel:rgba(17,19,20,.94);--shipexplorer-popup-line:#44e0c0;--shipexplorer-popup-inner:rgba(68,224,192,.38);--shipexplorer-popup-halo:rgba(68,224,192,.2);--shipexplorer-popup-text:#d7e3df;--shipexplorer-popup-muted:#7f9695;--shipexplorer-popup-accent:#ff7a16;}",
       ".shipexplorer-popup-theme-dark{--shipexplorer-popup-panel:rgba(18,20,22,.96);--shipexplorer-popup-line:#8fa4a0;--shipexplorer-popup-inner:rgba(143,164,160,.32);--shipexplorer-popup-halo:rgba(143,164,160,.18);--shipexplorer-popup-text:#f4f7f6;--shipexplorer-popup-muted:#a2afad;--shipexplorer-popup-accent:#44e0c0;}",
       ".shipexplorer-popup-theme-light{background:rgba(246,248,247,.62);--shipexplorer-popup-panel:rgba(255,255,255,.97);--shipexplorer-popup-line:#1f7d72;--shipexplorer-popup-inner:rgba(31,125,114,.24);--shipexplorer-popup-halo:rgba(31,125,114,.12);--shipexplorer-popup-text:#111314;--shipexplorer-popup-muted:#5c6c6a;--shipexplorer-popup-accent:#ff7a16;}",
+      ".shipexplorer-popup-variant-info{--shipexplorer-popup-accent:#44e0c0;}",
+      ".shipexplorer-popup-variant-warning{--shipexplorer-popup-accent:#ff7a16;}",
+      ".shipexplorer-popup-variant-danger{--shipexplorer-popup-accent:#e75a4f;}",
+      ".shipexplorer-popup-variant-success{--shipexplorer-popup-accent:#74f28c;}",
       "@media (prefers-reduced-motion:reduce){.shipexplorer-popup-visible .shipexplorer-popup-panel{animation:none;}}",
     ].join("");
 
@@ -343,6 +414,23 @@
     if (window.console && typeof window.console.warn === "function") {
       window.console.warn("ShipExplorerPopupClient:", message || "Popup backend unavailable.");
     }
+  }
+
+  function clearAutoHideTimer() {
+    if (!autoHideTimer) return;
+    window.clearTimeout(autoHideTimer);
+    autoHideTimer = 0;
+  }
+
+  function normalizeVariant(variant) {
+    if (variant === "warning" || variant === "danger" || variant === "success") return variant;
+    return "info";
+  }
+
+  function normalizeDuration(durationMs) {
+    var value = Number(durationMs);
+    if (!Number.isFinite(value) || value <= 0) return 0;
+    return Math.min(Math.round(value), 2147483647);
   }
 
   function parseJson(raw) {

@@ -1,5 +1,9 @@
 ﻿{
   "popupVisible": false,
   "popupMessage": "",
+  "title": "",
+  "variant": "info",
+  "durationMs": 0,
+  "dismissible": true,
   "updatedAt": ""
 }

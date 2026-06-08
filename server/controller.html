@@ -106,6 +106,7 @@
     }
 
     input,
+    select,
     textarea {
       width: 100%;
       border: 1px solid var(--teal);
@@ -123,6 +124,7 @@
     }
 
     input:focus,
+    select:focus,
     textarea:focus {
       border-color: var(--cyan);
       box-shadow: 0 0 0 2px rgba(68, 224, 192, 0.14);
@@ -132,6 +134,13 @@
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 16px;
+    }
+
+    .advanced-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 0.9fr 0.9fr 0.8fr;
+      gap: 16px;
+      margin-top: 4px;
     }
 
     .controls {
@@ -228,7 +237,8 @@
 
     @media (max-width: 680px) {
       header,
-      .grid {
+      .grid,
+      .advanced-grid {
         display: block;
       }
 
@@ -269,6 +279,36 @@
       </section>
     </div>
 
+    <div class="advanced-grid">
+      <section>
+        <label for="title">Titulo</label>
+        <input id="title" type="text" maxlength="80" placeholder="Aviso">
+      </section>
+
+      <section>
+        <label for="variant">Variante</label>
+        <select id="variant">
+          <option value="info">INFO</option>
+          <option value="warning">WARNING</option>
+          <option value="danger">DANGER</option>
+          <option value="success">SUCCESS</option>
+        </select>
+      </section>
+
+      <section>
+        <label for="durationMs">Duracion ms</label>
+        <input id="durationMs" type="number" min="0" step="100" value="0">
+      </section>
+
+      <section>
+        <label>&nbsp;</label>
+        <label class="option">
+          <input id="dismissible" type="checkbox" checked>
+          Dismissible
+        </label>
+      </section>
+    </div>
+
     <div class="controls">
       <button id="showButton" type="button">MOSTRAR POPUP</button>
       <button id="hideButton" class="danger" type="button">OCULTAR POPUP</button>
@@ -289,13 +329,21 @@
     const STORAGE_KEYS = {
       token: "shipexplorer.popup.token",
       rememberToken: "shipexplorer.popup.rememberToken",
-      message: "shipexplorer.popup.lastMessage"
+      message: "shipexplorer.popup.lastMessage",
+      title: "shipexplorer.popup.title",
+      variant: "shipexplorer.popup.variant",
+      durationMs: "shipexplorer.popup.durationMs",
+      dismissible: "shipexplorer.popup.dismissible"
     };
 
     const connectionState = document.querySelector("#connectionState");
     const tokenInput = document.querySelector("#token");
     const rememberTokenInput = document.querySelector("#rememberToken");
     const messageInput = document.querySelector("#message");
+    const titleInput = document.querySelector("#title");
+    const variantInput = document.querySelector("#variant");
+    const durationInput = document.querySelector("#durationMs");
+    const dismissibleInput = document.querySelector("#dismissible");
     const counter = document.querySelector("#counter");
     const socketUrl = document.querySelector("#socketUrl");
     const showButton = document.querySelector("#showButton");
@@ -394,9 +442,14 @@
     function showPopup(messageOverride) {
       const token = tokenInput.value.trim();
       const message = String(messageOverride || messageInput.value).trim();
+      const title = titleInput.value.trim();
+      const variant = variantInput.value;
+      const durationMs = parseDurationMs(durationInput.value);
+      const dismissible = dismissibleInput.checked;
 
       saveTokenPreference();
       saveLastMessage();
+      savePopupOptions();
 
       if (!token) {
         addLog("token requerido", "error");
@@ -411,7 +464,11 @@
       sendCommand({
         type: "popup:show",
         token,
-        message
+        message,
+        title,
+        variant,
+        durationMs,
+        dismissible
       });
     }
 
@@ -433,8 +490,13 @@
     function sendTest() {
       const testMessage = "SHIP POPUP TEST " + new Date().toLocaleTimeString();
       messageInput.value = testMessage;
+      titleInput.value = "Aviso";
+      variantInput.value = "info";
+      durationInput.value = "5000";
+      dismissibleInput.checked = true;
       updateCounter();
       localStorage.setItem(STORAGE_KEYS.message, testMessage);
+      savePopupOptions();
       showPopup(testMessage);
     }
 
@@ -442,6 +504,10 @@
       const visible = Boolean(state.popupVisible);
       popupState.innerHTML =
         "<strong>VISIBLE</strong> " + escapeHtml(visible ? "SI" : "NO") +
+        "<br><strong>TITULO</strong> " + escapeHtml(state.title || "") +
+        "<br><strong>VARIANTE</strong> " + escapeHtml(state.variant || "info") +
+        "<br><strong>DURACION</strong> " + escapeHtml(String(state.durationMs || 0)) +
+        "<br><strong>DISMISSIBLE</strong> " + escapeHtml(state.dismissible === false ? "NO" : "SI") +
         "<br><strong>MENSAJE</strong> " + escapeHtml(state.popupMessage || "") +
         "<br><strong>ACTUALIZADO</strong> " + escapeHtml(state.updatedAt || "");
     }
@@ -476,6 +542,10 @@
       }
 
       messageInput.value = localStorage.getItem(STORAGE_KEYS.message) || "";
+      titleInput.value = localStorage.getItem(STORAGE_KEYS.title) || "";
+      variantInput.value = localStorage.getItem(STORAGE_KEYS.variant) || "info";
+      durationInput.value = localStorage.getItem(STORAGE_KEYS.durationMs) || "0";
+      dismissibleInput.checked = localStorage.getItem(STORAGE_KEYS.dismissible) !== "false";
       updateCounter();
     }
 
@@ -495,6 +565,19 @@
       localStorage.setItem(STORAGE_KEYS.message, messageInput.value);
     }
 
+    function savePopupOptions() {
+      localStorage.setItem(STORAGE_KEYS.title, titleInput.value);
+      localStorage.setItem(STORAGE_KEYS.variant, variantInput.value);
+      localStorage.setItem(STORAGE_KEYS.durationMs, String(parseDurationMs(durationInput.value)));
+      localStorage.setItem(STORAGE_KEYS.dismissible, String(dismissibleInput.checked));
+    }
+
+    function parseDurationMs(value) {
+      const parsed = Number.parseInt(value, 10);
+      if (!Number.isFinite(parsed) || parsed < 0) return 0;
+      return Math.min(parsed, 2147483647);
+    }
+
     function escapeHtml(value) {
       return String(value)
         .replace(/&/g, "&amp;")
@@ -510,6 +593,10 @@
       updateCounter();
       saveLastMessage();
     });
+    titleInput.addEventListener("input", savePopupOptions);
+    variantInput.addEventListener("change", savePopupOptions);
+    durationInput.addEventListener("input", savePopupOptions);
+    dismissibleInput.addEventListener("change", savePopupOptions);
 
     showButton.addEventListener("click", () => showPopup());
     hideButton.addEventListener("click", hidePopup);

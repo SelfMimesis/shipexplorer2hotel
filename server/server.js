@@ -11,9 +11,12 @@ const SERVICE_NAME = "shipexplorer-popup-server";
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "";
 const NODE_ENV = process.env.NODE_ENV || "development";
 const MAX_POPUP_MESSAGE_LENGTH = 240;
+const MAX_POPUP_TITLE_LENGTH = 80;
+const MAX_POPUP_DURATION_MS = 2147483647;
 const MAX_WS_PAYLOAD_BYTES = 2048;
 const MAX_WS_FRAME_BYTES = 4096;
 const STATE_PATH = path.join(__dirname, "state.json");
+const VALID_VARIANTS = new Set(["info", "warning", "danger", "success"]);
 const DEV_ALLOWED_ORIGINS = [
   "http://localhost:8080",
   "http://127.0.0.1:8080",
@@ -218,33 +221,27 @@ function handleWsMessage(client, data, isBinary) {
   }
 
   if (payload.type === "popup:show") {
-    if (typeof payload.message !== "string") {
+    const parsedPopup = parsePopupShowPayload(payload);
+    if (!parsedPopup.ok) {
       sendError(client.ws, "BAD_REQUEST", "Mensaje inválido");
       return;
     }
 
-    if ([...payload.message].length > MAX_POPUP_MESSAGE_LENGTH) {
-      sendError(client.ws, "BAD_REQUEST", "Mensaje inválido");
-      return;
-    }
-
-    const message = sanitizePopupMessage(payload.message);
-    if (!message) {
-      sendError(client.ws, "BAD_REQUEST", "Mensaje inválido");
-      return;
-    }
-
-    setPopupState(true, message);
+    setPopupState(true, parsedPopup.value);
     return;
   }
 
-  setPopupState(false, "");
+  setPopupState(false);
 }
 
-function setPopupState(popupVisible, popupMessage) {
+function setPopupState(popupVisible, popupOptions = {}) {
   popupState = {
     popupVisible: Boolean(popupVisible),
-    popupMessage: popupVisible ? popupMessage : "",
+    popupMessage: popupVisible ? popupOptions.popupMessage : "",
+    title: popupVisible ? popupOptions.title : "",
+    variant: popupVisible ? popupOptions.variant : "info",
+    durationMs: popupVisible ? popupOptions.durationMs : 0,
+    dismissible: popupVisible ? popupOptions.dismissible : true,
     updatedAt: new Date().toISOString(),
   };
 
@@ -258,6 +255,10 @@ function getPublicPopupState() {
   return {
     popupVisible: popupState.popupVisible,
     popupMessage: popupState.popupMessage,
+    title: popupState.title,
+    variant: popupState.variant,
+    durationMs: popupState.durationMs,
+    dismissible: popupState.dismissible,
     updatedAt: popupState.updatedAt,
   };
 }
@@ -274,6 +275,10 @@ function createDefaultPopupState() {
   return {
     popupVisible: false,
     popupMessage: "",
+    title: "",
+    variant: "info",
+    durationMs: 0,
+    dismissible: true,
     updatedAt: "",
   };
 }
@@ -314,13 +319,27 @@ function normalizePopupState(candidate) {
     throw new Error(`Persisted popupMessage exceeds ${MAX_POPUP_MESSAGE_LENGTH} characters.`);
   }
 
+  const popupMessage = sanitizePopupText(candidate.popupMessage);
+  const title = typeof candidate.title === "string" ? sanitizePopupText(candidate.title) : "";
+  if ([...title].length > MAX_POPUP_TITLE_LENGTH) {
+    throw new Error(`Persisted title exceeds ${MAX_POPUP_TITLE_LENGTH} characters.`);
+  }
+
+  const variant = typeof candidate.variant === "string" && VALID_VARIANTS.has(candidate.variant) ? candidate.variant : "info";
+  const durationMs = Number.isInteger(candidate.durationMs) && candidate.durationMs >= 0 && candidate.durationMs <= MAX_POPUP_DURATION_MS ? candidate.durationMs : 0;
+  const dismissible = typeof candidate.dismissible === "boolean" ? candidate.dismissible : true;
+
   if (typeof candidate.updatedAt !== "string") {
     throw new Error("Persisted updatedAt must be a string.");
   }
 
   return {
     popupVisible: candidate.popupVisible,
-    popupMessage: candidate.popupVisible ? candidate.popupMessage : "",
+    popupMessage: candidate.popupVisible ? popupMessage : "",
+    title: candidate.popupVisible ? title : "",
+    variant: candidate.popupVisible ? variant : "info",
+    durationMs: candidate.popupVisible ? durationMs : 0,
+    dismissible: candidate.popupVisible ? dismissible : true,
     updatedAt: candidate.updatedAt,
   };
 }
@@ -382,7 +401,58 @@ function sendError(ws, code, message) {
   sendJson(ws, { type: "error", code, message });
 }
 
-function sanitizePopupMessage(message) {
+function parsePopupShowPayload(payload) {
+  if (typeof payload.message !== "string") {
+    return { ok: false };
+  }
+
+  if ([...payload.message].length > MAX_POPUP_MESSAGE_LENGTH) {
+    return { ok: false };
+  }
+
+  const popupMessage = sanitizePopupText(payload.message);
+  if (!popupMessage) {
+    return { ok: false };
+  }
+
+  if (payload.title !== undefined && payload.title !== null && typeof payload.title !== "string") {
+    return { ok: false };
+  }
+
+  const rawTitle = typeof payload.title === "string" ? payload.title : "";
+  if ([...rawTitle].length > MAX_POPUP_TITLE_LENGTH) {
+    return { ok: false };
+  }
+
+  const title = sanitizePopupText(rawTitle);
+  const variant = payload.variant === undefined || payload.variant === null ? "info" : payload.variant;
+  if (typeof variant !== "string" || !VALID_VARIANTS.has(variant)) {
+    return { ok: false };
+  }
+
+  const durationMs = payload.durationMs === undefined || payload.durationMs === null ? 0 : payload.durationMs;
+  if (!Number.isInteger(durationMs) || durationMs < 0 || durationMs > MAX_POPUP_DURATION_MS) {
+    return { ok: false };
+  }
+
+  const dismissible = payload.dismissible === undefined || payload.dismissible === null ? true : payload.dismissible;
+  if (typeof dismissible !== "boolean") {
+    return { ok: false };
+  }
+
+  return {
+    ok: true,
+    value: {
+      popupMessage,
+      title,
+      variant,
+      durationMs,
+      dismissible,
+    },
+  };
+}
+
+function sanitizePopupText(message) {
   return message
     .normalize("NFKC")
     .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "")
