@@ -3,6 +3,11 @@ import { clamp, drawBar, drawPixelLine, drawRect, drawRing, drawText, formatPerc
 
 const CONTROL_SIZE = 48;
 const CONTROL_GAP = 8;
+const LOGO_PATH =
+  "M570.8,431.1c0,145.2-114.5,279.3-281.3,278.7-160.1-.6-277.7-130.2-277.4-279.4.3-150.5,119.9-277.6,277.4-278.5,161.7-.9,281.4,129.3,281.3,279.2ZM288.5,207.6c0-.2.2-.7.2-1.3,0-15.2,0-30.4.1-45.6,0-3.1-1.6-3.5-4-3.3-10.1.7-20.2,1-30.1,2.3-61.5,7.8-114.7,33.5-157.6,78C28.5,308.9,4.1,394.1,24.5,490.8c24.8,117.7,124.9,203.8,244.5,212.9,6.4.5,12.8,0,19.2,0,.1-.3.4-.5.4-.8,0-17.2,0-34.3.2-51.5,0-2.6-1.4-2.8-3.5-2.9-6.6-.4-13.2-.7-19.8-1.4-3.2-.4-5.1.1-7.1,3-6.1,8.8-16.8,12.4-27.2,9.7-10.1-2.6-17.7-10.9-18.9-21.3-.4-3.6-2-5-5.1-6.3-32.8-13.4-60.7-33.6-83.8-60.4-17.6-20.4-31-43.2-40-68.7-.7-2.1-1.2-4-4.3-4.3-14.5-1.6-24.6-10.8-27.5-24.7-2.7-13,3.4-25.8,16-32.9,2.3-1.3,3-2.7,2.9-5.3-.9-25.8,2.6-51.1,10.7-75.6,1-3,.4-4.5-2.1-6.4-15.7-11.8-20.3-32.9-11.2-50.2,9-17,29.6-25.2,47.9-18.4,4.9,1.8,7.2.6,10.4-3,32.6-36.3,72.9-59.7,120.8-69.2,13.4-2.7,27.1-3.7,41.2-5.5ZM345.7,581.2c-.8-.2-.9-.3-1.1-.2-1,.3-2,.6-3,.9-49.1,15.5-95.4,9.6-138.6-18.5-3.3-2.1-5.4-2.3-8.7-.4-7.6,4.3-17,2.7-23-3.1-6.4-6.2-8.2-15.3-4.1-23.2,1.5-2.9,1.1-4.5-.7-7-36.2-48.6-44-101.6-21.6-157.8,16.7-41.8,47.3-70.5,89.2-87.1,3.5-1.4,5-2.7,4.9-7-.7-25.3,22.6-45,47.4-40.7,18.1,3.2,30.9,16.6,33.8,35.3.3,1.7,1.1,4.3,2.2,4.7,9,2.8,18.1,5.1,27.5,7.7.5-.9,1.1-1.9,1.5-3,6.3-15.3,12.6-30.6,19-45.9,1.4-3.2.6-4.4-2.5-5.6-18.7-7-37.9-11.9-57.9-13.4-60.3-4.7-113.6,12.5-159.5,52-7.9,6.8-15,14.6-22.5,22.1,1.5,1.6,2.3,2.5,3.1,3.4,12.8,13.2,15.3,31.9,6.2,47.9-8.6,15.2-26.2,22.7-43.8,18.4-3.2-.8-4.4-.2-5.4,3-6.6,20.8-9.9,42.2-10.1,64,0,3.2,0,6.5,0,9.6,19.6,1.9,30.4,9.6,33.6,23.7,1.5,6.5,1.1,12.8-1.5,19-3.8,9.3-10.9,14.8-19.9,18.1,9.4,47,81.1,121.2,123.1,127.7,8.1-13.4,17.3-18.7,29.2-16,15.4,3.5,21.4,14.2,21.1,29.5,35.1,4.4,68.8.5,102.1-11.8-6.9-15.9-13.6-31.3-20.1-46.4ZM240.5,290.3c-1.9.7-3.7,1.3-5.5,2-19.2,7.7-36.1,19-50.9,33.6-53.5,52.8-58.8,140.5-12.1,198.7,1.8,2.2,3.1,3.2,6.3,2.1,14.8-5.2,29.4,7,26.1,22.3-1.2,5.3.9,7.2,4.5,9.4,49.8,30.3,100.9,32.5,153,6.4,11.7-5.9,22.3-13.6,32.1-23.1-13-13.5-25.8-26.7-38.5-39.9-41.6,37.1-101.1,30.9-134-5.4-33.5-36.9-33.8-91-1-127.5,16.1-17.8,36.2-28.5,60.1-30.8,34.2-3.4,62.4,9,84.8,35.1,13.1-13.5,25.9-26.6,39-40.1-22.9-25.7-50.8-41.8-84.3-48.7-5.3,19.5-17.2,31.7-37.3,33.3-20.3,1.6-33.9-8.8-42.3-27.4ZM290.2,519c47.5.4,87.6-38.5,88.1-85.3.5-49.3-38-88.9-86.8-89.3-48.2-.4-87.7,38.5-88,86.7-.3,48.3,38.4,87.5,86.7,88Z";
+const LOGO_SOURCE_Y = 145;
+const LOGO_SOURCE_W = 595.3;
+const LOGO_SOURCE_H = 590;
 
 export class Hud {
   constructor() {
@@ -13,6 +18,7 @@ export class Hud {
     };
     this.dataPhase = 0;
     this.noiseSeed = 1;
+    this.logoPath = null;
   }
 
   update(dt, game) {
@@ -66,6 +72,7 @@ export class Hud {
   drawPanels(ctx, game) {
     this.drawLeftPanel(ctx, game);
     this.drawBottomPanel(ctx, game);
+    this.drawAnimatedLogo(ctx, game);
     this.drawControlPad(ctx, game);
   }
 
@@ -224,6 +231,78 @@ export class Hud {
     drawText(ctx, `${Math.round(game.ship.vy).toString().padStart(4, "0")}`, x + 18, y + 382, COLORS.white, 16);
 
     drawText(ctx, "AUTO NAV", x + 18, y + 450, COLORS.amber, 14);
+  }
+
+  getLogoPath() {
+    if (!this.logoPath && typeof Path2D !== "undefined") {
+      this.logoPath = new Path2D(LOGO_PATH);
+    }
+
+    return this.logoPath;
+  }
+
+  drawAnimatedLogo(ctx, game) {
+    const path = this.getLogoPath();
+    if (!path) return;
+
+    const x = 54;
+    const y = 634;
+    const size = 120;
+    const scale = size / LOGO_SOURCE_W;
+    const t = game.totalTime;
+    const reduced = game.settings?.reducedMotion;
+    const centerX = x + size * 0.5;
+    const centerY = y + 58;
+    const proximity = 1 - clamp(Math.hypot(game.pointer.x - centerX, game.pointer.y - centerY) / 180, 0, 1);
+    const pulse = reduced ? 0 : Math.sin(t * 2.7) * 0.08;
+    const alpha = clamp(0.62 + pulse + proximity * 0.24, 0.3, 1);
+    const sweep = reduced ? 0.48 : (t * 0.18) % 1;
+
+    drawRect(ctx, x - 14, y - 12, size + 28, 138, COLORS.cyanDim, "rgba(17, 19, 20, 0.42)", 1, 0.72);
+    drawRect(ctx, x - 8, y - 6, size + 16, 126, withAlpha(COLORS.cyan, 0.42), null, 1);
+    drawPixelLine(ctx, x - 2, y + 6, x + 18, y + 6, COLORS.amber, 0.72);
+    drawPixelLine(ctx, x + size - 18, y + 112, x + size + 2, y + 112, COLORS.amber, 0.62);
+
+    if (!reduced) {
+      const glitch = Math.sin(t * 17) > 0.92 ? 2 : 0;
+      this.drawLogoShape(ctx, path, x + glitch, y, scale, COLORS.red, 0.12);
+      this.drawLogoShape(ctx, path, x - glitch, y, scale, COLORS.amber, 0.1);
+    }
+
+    this.drawLogoShape(ctx, path, x, y, scale, COLORS.cyan, alpha);
+    this.drawLogoScan(ctx, path, x, y, scale, sweep, alpha);
+
+    drawRing(ctx, centerX, centerY, 68 + (reduced ? 0 : Math.sin(t * 3.1) * 3), COLORS.cyanDim, 0.14 + proximity * 0.08, 1);
+    drawText(ctx, "RIM", x + 42, y + 126, COLORS.cyan, 12, "center");
+    drawText(ctx, "PATCH", x + 76, y + 126, COLORS.amber, 12, "center");
+  }
+
+  drawLogoShape(ctx, path, x, y, scale, color, alpha) {
+    ctx.save();
+    ctx.translate(Math.round(x), Math.round(y - LOGO_SOURCE_Y * scale));
+    ctx.scale(scale, scale);
+    ctx.fillStyle = withAlpha(color, alpha * 0.18);
+    ctx.strokeStyle = withAlpha(color, alpha);
+    ctx.lineWidth = 8;
+    ctx.fill(path);
+    ctx.stroke(path);
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = withAlpha(COLORS.white, alpha * 0.18);
+    ctx.stroke(path);
+    ctx.restore();
+  }
+
+  drawLogoScan(ctx, path, x, y, scale, sweep, alpha) {
+    ctx.save();
+    ctx.translate(Math.round(x), Math.round(y - LOGO_SOURCE_Y * scale));
+    ctx.scale(scale, scale);
+    ctx.clip(path);
+    const scanY = LOGO_SOURCE_Y + sweep * LOGO_SOURCE_H;
+    ctx.fillStyle = withAlpha(COLORS.white, alpha * 0.26);
+    ctx.fillRect(0, scanY - 8, LOGO_SOURCE_W, 6);
+    ctx.fillStyle = withAlpha(COLORS.amber, alpha * 0.2);
+    ctx.fillRect(0, scanY + 2, LOGO_SOURCE_W, 12);
+    ctx.restore();
   }
 
   drawMetricBar(ctx, label, value, x, y) {

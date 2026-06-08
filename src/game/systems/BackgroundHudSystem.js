@@ -76,7 +76,7 @@ export class BackgroundHudSystem {
     this.drawFixedGrid(ctx);
     this.drawReactiveCells(ctx);
     this.drawDataPoints(ctx);
-    this.drawScanLines(ctx);
+    this.drawScanLines(ctx, game);
     this.drawDataStrips(ctx);
     this.drawDiagnostics(ctx);
     this.drawGlitch(ctx, game);

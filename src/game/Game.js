@@ -114,6 +114,8 @@ export class Game {
       prevY: y,
       vx: 90,
       vy: 0,
+      driftX: 1,
+      driftY: 0,
       angle: 0,
       speed: 185,
       autoAngle: 0.18,
@@ -480,26 +482,31 @@ export class Game {
     const keyVector = this.getKeyboardVector();
     if (keyVector.x !== 0 || keyVector.y !== 0) {
       this.activeDirection = { id: "keys", ...keyVector };
+      this.setShipDrift(keyVector);
       return keyVector;
     }
 
     if (this.pointer.isDown) {
       const control = this.hud.getDirectionFromPoint(this.pointer.x, this.pointer.y);
       if (control) {
+        const vector = { x: control.vx, y: control.vy };
         this.activeDirection = control;
-        return { x: control.vx, y: control.vy };
+        this.setShipDrift(vector);
+        return vector;
       }
 
       if (this.hud.isPointInMainFrame(this.pointer.x, this.pointer.y)) {
         const vector = this.normalize(this.pointer.x - this.ship.x, this.pointer.y - this.ship.y);
-        this.activeDirection = { id: "point", vx: vector.x, vy: vector.y };
-        return vector;
+        if (vector.x !== 0 || vector.y !== 0) {
+          this.activeDirection = { id: "point", vx: vector.x, vy: vector.y };
+          this.setShipDrift(vector);
+          return vector;
+        }
       }
     }
 
     this.activeDirection = null;
-    this.ship.autoAngle += FIXED_TIMESTEP * (0.42 + Math.sin(this.totalTime * 0.7) * 0.16);
-    return this.getAutoVector();
+    return this.normalize(this.ship.driftX, this.ship.driftY);
   }
 
   getKeyboardVector() {
@@ -531,10 +538,17 @@ export class Game {
     return { x: x / length, y: y / length };
   }
 
+  setShipDrift(vector) {
+    const direction = this.normalize(vector.x, vector.y);
+    if (direction.x === 0 && direction.y === 0) return;
+    this.ship.driftX = direction.x;
+    this.ship.driftY = direction.y;
+  }
+
   updateShip(dt) {
     const direction = this.getDirectionVector();
     const manual = Boolean(this.activeDirection);
-    const targetSpeed = manual ? this.ship.speed * 1.16 : this.ship.speed * 0.72;
+    const targetSpeed = manual ? this.ship.speed * 1.16 : this.ship.speed * 0.96;
     const ease = 1 - Math.pow(0.0008, dt);
 
     this.ship.prevX = this.ship.x;
@@ -574,13 +588,17 @@ export class Game {
 
     if (this.ship.x !== beforeX) {
       this.ship.vx *= -0.28;
+      this.ship.driftX *= -1;
       this.ship.autoAngle = Math.PI - this.ship.autoAngle;
     }
 
     if (this.ship.y !== beforeY) {
       this.ship.vy *= -0.28;
+      this.ship.driftY *= -1;
       this.ship.autoAngle *= -1;
     }
+
+    this.setShipDrift({ x: this.ship.driftX, y: this.ship.driftY });
   }
 
   render(interpolation = 0) {

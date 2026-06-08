@@ -98,6 +98,15 @@ export class Menu {
   }
 
   button(id, label, x, y, w = BUTTON_W, h = BUTTON_H, action = () => {}) {
+    if (typeof w === "function") {
+      action = w;
+      w = BUTTON_W;
+      h = BUTTON_H;
+    } else if (typeof h === "function") {
+      action = h;
+      h = BUTTON_H;
+    }
+
     return { id, label, x: Math.round(x), y: Math.round(y), w, h, action };
   }
 
