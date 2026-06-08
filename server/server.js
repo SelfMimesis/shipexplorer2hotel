@@ -1,4 +1,5 @@
 const crypto = require("crypto");
+const fs = require("fs/promises");
 const http = require("http");
 const path = require("path");
 const express = require("express");
@@ -11,6 +12,7 @@ const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "";
 const NODE_ENV = process.env.NODE_ENV || "development";
 const MAX_POPUP_MESSAGE_LENGTH = 240;
 const MAX_WS_PAYLOAD_BYTES = 2048;
+const STATE_PATH = path.join(__dirname, "state.json");
 const COMMAND_RATE_LIMIT = {
   windowMs: 60 * 1000,
   max: 20,
@@ -26,11 +28,8 @@ if (!ADMIN_TOKEN) {
 }
 
 const allowedOrigins = parseAllowedOrigins(process.env.ALLOWED_ORIGINS || "");
-let popupState = {
-  popupVisible: false,
-  popupMessage: "",
-  updatedAt: new Date().toISOString(),
-};
+let popupState = createDefaultPopupState();
+let saveQueue = Promise.resolve();
 
 const app = express();
 app.disable("x-powered-by");
@@ -153,8 +152,9 @@ wss.on("close", () => {
   clearInterval(heartbeat);
 });
 
-server.listen(PORT, HOST, () => {
-  console.log(`${SERVICE_NAME} listening on ${HOST}:${PORT}`);
+startServer().catch((error) => {
+  console.error(`FATAL: Unable to start ${SERVICE_NAME}.`, error);
+  process.exit(1);
 });
 
 function handleWsMessage(client, data, isBinary) {
@@ -238,6 +238,9 @@ function setPopupState(popupVisible, popupMessage) {
     updatedAt: new Date().toISOString(),
   };
 
+  queueSavePopupState().catch((error) => {
+    console.error("ERROR: Unable to persist popup state.", error);
+  });
   broadcastPopupUpdate();
 }
 
@@ -247,6 +250,102 @@ function getPublicPopupState() {
     popupMessage: popupState.popupMessage,
     updatedAt: popupState.updatedAt,
   };
+}
+
+async function startServer() {
+  popupState = await loadPopupState();
+
+  server.listen(PORT, HOST, () => {
+    console.log(`${SERVICE_NAME} listening on ${HOST}:${PORT}`);
+  });
+}
+
+function createDefaultPopupState() {
+  return {
+    popupVisible: false,
+    popupMessage: "",
+    updatedAt: "",
+  };
+}
+
+async function loadPopupState() {
+  try {
+    const raw = await fs.readFile(STATE_PATH, "utf8");
+    const loaded = JSON.parse(raw.replace(/^\uFEFF/, ""));
+    return normalizePopupState(loaded);
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      const defaultState = createDefaultPopupState();
+      await savePopupStateNow(defaultState);
+      return defaultState;
+    }
+
+    await moveCorruptStateFile(error);
+    const defaultState = createDefaultPopupState();
+    await savePopupStateNow(defaultState);
+    return defaultState;
+  }
+}
+
+function normalizePopupState(candidate) {
+  if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) {
+    throw new Error("Persisted popup state must be an object.");
+  }
+
+  if (typeof candidate.popupVisible !== "boolean") {
+    throw new Error("Persisted popupVisible must be a boolean.");
+  }
+
+  if (typeof candidate.popupMessage !== "string") {
+    throw new Error("Persisted popupMessage must be a string.");
+  }
+
+  if ([...candidate.popupMessage].length > MAX_POPUP_MESSAGE_LENGTH) {
+    throw new Error(`Persisted popupMessage exceeds ${MAX_POPUP_MESSAGE_LENGTH} characters.`);
+  }
+
+  if (typeof candidate.updatedAt !== "string") {
+    throw new Error("Persisted updatedAt must be a string.");
+  }
+
+  return {
+    popupVisible: candidate.popupVisible,
+    popupMessage: candidate.popupVisible ? candidate.popupMessage : "",
+    updatedAt: candidate.updatedAt,
+  };
+}
+
+async function moveCorruptStateFile(error) {
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const corruptPath = path.join(__dirname, `state.corrupt.${timestamp}.json`);
+
+  try {
+    await fs.rename(STATE_PATH, corruptPath);
+    console.warn(`WARNING: Corrupt popup state moved to ${path.basename(corruptPath)}. ${error.message}`);
+  } catch (renameError) {
+    if (renameError.code !== "ENOENT") {
+      console.warn("WARNING: Unable to move corrupt popup state.", renameError);
+    }
+  }
+}
+
+function queueSavePopupState() {
+  const snapshot = getPublicPopupState();
+
+  saveQueue = saveQueue
+    .catch(() => {})
+    .then(() => savePopupStateNow(snapshot));
+
+  return saveQueue;
+}
+
+async function savePopupStateNow(stateToSave) {
+  const normalizedState = normalizePopupState(stateToSave);
+  const tempPath = `${STATE_PATH}.${process.pid}.${Date.now()}.tmp`;
+
+  await fs.mkdir(path.dirname(STATE_PATH), { recursive: true });
+  await fs.writeFile(tempPath, `${JSON.stringify(normalizedState, null, 2)}\n`, "utf8");
+  await fs.rename(tempPath, STATE_PATH);
 }
 
 function buildPopupUpdate() {

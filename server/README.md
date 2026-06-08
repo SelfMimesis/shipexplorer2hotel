@@ -17,6 +17,7 @@ server/
 ├─ package.json
 ├─ server.js
 ├─ controller.html
+├─ state.json
 ├─ README.md
 ```
 
@@ -71,6 +72,12 @@ Usa `production` en Render.
 `PORT`
 
 Render lo define automaticamente. El servidor usa `process.env.PORT || 10000`.
+
+## Estado Persistido
+
+El ultimo estado del popup se guarda en `server/state.json`. Al arrancar se carga este archivo; si no existe se crea con estado por defecto. Si esta corrupto, se renombra a `state.corrupt.<timestamp>.json` y se crea uno nuevo.
+
+En Render, usa Persistent Disk si necesitas conservar `state.json` entre reinicios o redeploys del servicio.
 
 ## Render
 
