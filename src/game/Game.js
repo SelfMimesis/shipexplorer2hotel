@@ -19,6 +19,8 @@ import { Hud } from "./ui/Hud.js";
 import { Menu } from "./ui/Menu.js";
 
 const SHIP_RADIUS = 24;
+const SHIP_FIELD_RADIUS = 78;
+const SHIP_FIELD_PULSE = 5;
 
 export class Game {
   constructor(canvas, ctx) {
@@ -374,11 +376,7 @@ export class Game {
     this.timeLeft = Math.max(0, GAME_RULES.duration - this.elapsed);
     this.updateShip(dt);
     this.spawn.update(dt, this);
-
-    const onControl = Boolean(this.hud.getDirectionFromPoint(this.pointer.x, this.pointer.y));
-    if (this.pointer.justPressed && this.hud.isPointInMainFrame(this.pointer.x, this.pointer.y) && !onControl) {
-      this.resolveBubbleClick(this.pointer.x, this.pointer.y);
-    }
+    this.resolveShipBubbleCollisions();
 
     if (this.timeLeft <= 0) this.endRun("RUN COMPLETE");
   }
@@ -394,19 +392,20 @@ export class Game {
 
   resolveBubbleClick(x, y) {
     const bubble = this.spawn.findAt(x, y);
-    this.attempts += 1;
 
     if (bubble) {
       this.popBubble(bubble);
       return;
     }
 
+    this.attempts += 1;
     this.registerMiss();
   }
 
   popBubble(bubble) {
     if (!this.spawn.pop(bubble)) return;
 
+    this.attempts += 1;
     const chain = this.elapsed - this.lastPopTime < GAME_RULES.comboWindow;
     this.combo = chain ? this.combo + 1 : 1;
     this.maxCombo = Math.max(this.maxCombo, this.combo);
@@ -452,6 +451,10 @@ export class Game {
   }
 
   handleBubbleExpired(bubble) {
+    this.attempts += 1;
+    this.misses += 1;
+    this.updateAccuracy();
+
     if (bubble.type !== "unstable") return;
 
     this.unstableLeaks += 1;
@@ -463,6 +466,26 @@ export class Game {
     this.floatingText.add("LEAK", bubble.x, bubble.y - 42, COLORS.red, 20, { life: 0.7, glitch: true });
     this.background.emitUnstableGlitch(1.2);
     this.addShake(0.22);
+  }
+
+  resolveShipBubbleCollisions() {
+    const radius = this.getShipFieldRadius();
+
+    for (const bubble of [...this.spawn.bubbles]) {
+      if (this.doesShipFieldTouchBubble(bubble, radius)) {
+        this.popBubble(bubble);
+      }
+    }
+  }
+
+  doesShipFieldTouchBubble(bubble, shipRadius = this.getShipFieldRadius()) {
+    if (!bubble || bubble.popped || bubble.expired) return false;
+    const distance = Math.hypot(bubble.x - this.ship.x, bubble.y - this.ship.y);
+    return distance <= shipRadius + bubble.radius;
+  }
+
+  getShipFieldRadius() {
+    return SHIP_FIELD_RADIUS + Math.sin(this.ship.pulse * 5) * SHIP_FIELD_PULSE;
   }
 
   addShake(amount) {
@@ -637,7 +660,7 @@ export class Game {
     }
 
     drawRing(ctx, x, y, 48 + Math.sin(this.ship.pulse * 8) * 4, COLORS.cyan, 0.18, 1);
-    drawRing(ctx, x, y, 78 + Math.sin(this.ship.pulse * 5) * 5, COLORS.amber, 0.08, 1);
+    drawRing(ctx, x, y, this.getShipFieldRadius(), COLORS.amber, 0.12, 1);
 
     ctx.save();
     ctx.translate(x, y);
