@@ -139,6 +139,14 @@ wss://TU-SERVICIO.onrender.com/ws
 
 Los viewers de ShipExplorer se conectan a `/ws` y reciben el estado actual inmediatamente.
 
+Tambien pueden pedir el estado actual:
+
+```json
+{
+  "type": "state:get"
+}
+```
+
 Mensaje enviado por el controller para mostrar popup:
 
 ```json

@@ -187,6 +187,11 @@ function handleWsMessage(client, data, isBinary) {
     return;
   }
 
+  if (payload.type === "state:get") {
+    sendJson(client.ws, buildPopupUpdate());
+    return;
+  }
+
   if (payload.type !== "popup:show" && payload.type !== "popup:hide") {
     sendError(client.ws, "Unsupported message type.");
     return;
