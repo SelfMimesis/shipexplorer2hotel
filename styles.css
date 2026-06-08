@@ -1,0 +1,117 @@
+@font-face {
+  font-family: "Automatron";
+  src: url("./assets/fonts/AUTOMATRON%20NUMBERSDEC.TTF") format("truetype");
+  font-display: block;
+}
+
+:root {
+  color-scheme: dark;
+  --bg: #050607;
+  --panel: #071318;
+  --cyan: #38f5e7;
+  --teal: #0fb7a3;
+  --amber: #ff9d2e;
+  --red: #ff3f36;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--cyan);
+  font-family: "Automatron", "Consolas", monospace;
+  touch-action: none;
+}
+
+body {
+  display: grid;
+  place-items: center;
+}
+
+.shell {
+  display: grid;
+  width: 100vw;
+  height: 100vh;
+  place-items: center;
+  padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+}
+
+.stage {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+}
+
+#game {
+  display: block;
+  width: min(calc(100vw - 16px), calc((100vh - 48px) * 1.75));
+  height: auto;
+  max-width: calc(100vw - 16px);
+  max-height: calc(100vh - 48px);
+  aspect-ratio: 1400 / 800;
+  background: #020508;
+  color: var(--cyan);
+  font-family: "Automatron", "Consolas", monospace;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  touch-action: none;
+  user-select: none;
+  outline: 1px solid rgba(56, 245, 231, 0.45);
+  box-shadow:
+    0 0 0 2px rgba(6, 21, 24, 0.95),
+    0 0 22px rgba(56, 245, 231, 0.35),
+    0 0 48px rgba(255, 86, 40, 0.16);
+}
+
+.fullscreen-button,
+.calibration,
+noscript {
+  font-family: "Automatron", "Consolas", monospace;
+}
+
+.fullscreen-button {
+  position: fixed;
+  top: max(10px, env(safe-area-inset-top));
+  right: max(10px, env(safe-area-inset-right));
+  z-index: 10;
+  min-width: 44px;
+  height: 28px;
+  border: 1px solid rgba(56, 245, 231, 0.72);
+  background: rgba(4, 16, 19, 0.82);
+  color: var(--cyan);
+  font-size: 8px;
+  line-height: 1;
+  letter-spacing: 0;
+  cursor: pointer;
+  box-shadow: 0 0 12px rgba(56, 245, 231, 0.18);
+}
+
+.fullscreen-button:hover,
+.fullscreen-button:focus-visible {
+  border-color: var(--amber);
+  color: var(--amber);
+  outline: none;
+}
+
+.calibration {
+  margin: 0;
+  color: rgba(56, 245, 231, 0.62);
+  font-size: 7px;
+  letter-spacing: 0;
+  text-align: center;
+}
+
+noscript {
+  position: fixed;
+  left: 12px;
+  bottom: 12px;
+  color: var(--amber);
+  font-size: 8px;
+}
