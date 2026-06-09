@@ -15,7 +15,6 @@
     videoLoadTimeoutMs: 8000,
     videoBackground: "#6EA285",
     screenZIndex: 999998,
-    screenCloseZIndex: 1000000,
     screenBackground: "#000000",
     allowSoundAfterTap: false,
   };
@@ -44,7 +43,6 @@
     videoError: "",
     screenLocked: false,
     screenStatus: "hidden",
-    screenLocalHidden: false,
     updatedAt: "",
     localHidden: false,
     reconnectAttempt: 0,
@@ -64,7 +62,6 @@
   var videoTransitionTimer = 0;
   var overlay = null;
   var screenOverlay = null;
-  var screenCloseButton = null;
   var videoOverlay = null;
   var videoElement = null;
   var standbyVideoElement = null;
@@ -81,14 +78,12 @@
   function init(userOptions) {
     options = mergeOptions(DEFAULT_OPTIONS, userOptions || {});
     var hasCustomScreenZIndex = Boolean(userOptions && Object.prototype.hasOwnProperty.call(userOptions, "screenZIndex"));
-    var hasCustomScreenCloseZIndex = Boolean(userOptions && Object.prototype.hasOwnProperty.call(userOptions, "screenCloseZIndex"));
     options.autoReconnect = options.autoReconnect !== false;
     options.showCloseButton = options.showCloseButton !== false;
     options.zIndex = Number.isFinite(Number(options.zIndex)) ? Number(options.zIndex) : DEFAULT_OPTIONS.zIndex;
     options.theme = VALID_THEMES[options.theme] ? options.theme : DEFAULT_OPTIONS.theme;
     options.videoZIndex = Number.isFinite(Number(options.videoZIndex)) ? Number(options.videoZIndex) : Math.max(DEFAULT_OPTIONS.videoZIndex, options.zIndex + 1);
     options.screenZIndex = hasCustomScreenZIndex && Number.isFinite(Number(options.screenZIndex)) ? Number(options.screenZIndex) : Math.max(1, options.videoZIndex - 1);
-    options.screenCloseZIndex = hasCustomScreenCloseZIndex && Number.isFinite(Number(options.screenCloseZIndex)) ? Number(options.screenCloseZIndex) : options.videoZIndex + 1;
     options.videoMuted = options.videoMuted !== false;
     options.videoLoop = options.videoLoop === true;
     options.videoFadeMs = normalizeVideoDuration(options.videoFadeMs, DEFAULT_OPTIONS.videoFadeMs);
@@ -390,8 +385,6 @@
   }
 
   function showRemoteScreen() {
-    state.screenLocalHidden = false;
-
     whenReady(function () {
       injectStyles();
       createScreenDom();
@@ -405,11 +398,6 @@
       createScreenDom();
       hideScreenDom(false);
     });
-  }
-
-  function closeScreenAndReturnToGame() {
-    state.screenLocalHidden = true;
-    hideScreenDom(true);
   }
 
   function getVideoStatus() {
@@ -427,7 +415,6 @@
     return {
       screenLocked: state.screenLocked,
       screenStatus: state.screenStatus,
-      screenLocalHidden: state.screenLocalHidden,
     };
   }
 
@@ -450,7 +437,6 @@
       videoError: state.videoError,
       screenLocked: state.screenLocked,
       screenStatus: state.screenStatus,
-      screenLocalHidden: state.screenLocalHidden,
       updatedAt: state.updatedAt,
       localHidden: state.localHidden,
       reconnectAttempt: state.reconnectAttempt,
@@ -637,27 +623,11 @@
     screenOverlay.style.zIndex = String(options.screenZIndex);
     screenOverlay.style.background = options.screenBackground;
 
-    screenCloseButton = document.createElement("button");
-    screenCloseButton.className = "shipexplorer-screen-close";
-    screenCloseButton.type = "button";
-    screenCloseButton.textContent = "VOLVER AL JUEGO";
-    screenCloseButton.hidden = true;
-    screenCloseButton.style.zIndex = String(options.screenCloseZIndex);
-    screenCloseButton.addEventListener("click", closeScreenAndReturnToGame);
-
-    document.addEventListener("keydown", function (event) {
-      if (event.key !== "Escape" || !screenOverlay || screenOverlay.hidden) return;
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      closeScreenAndReturnToGame();
-    });
-
     document.body.appendChild(screenOverlay);
-    document.body.appendChild(screenCloseButton);
   }
 
   function showScreenDom() {
-    if (!screenOverlay || !screenCloseButton) return;
+    if (!screenOverlay) return;
 
     state.screenLocked = true;
     state.screenStatus = "locked";
@@ -665,16 +635,13 @@
     screenOverlay.setAttribute("aria-hidden", "false");
     screenOverlay.style.zIndex = String(options.screenZIndex);
     screenOverlay.style.background = options.screenBackground;
-    screenCloseButton.hidden = false;
-    screenCloseButton.style.zIndex = String(options.screenCloseZIndex);
   }
 
   function hideScreenDom(closeVideo) {
-    if (!screenOverlay || !screenCloseButton) return;
+    if (!screenOverlay) return;
 
     screenOverlay.hidden = true;
     screenOverlay.setAttribute("aria-hidden", "true");
-    screenCloseButton.hidden = true;
     state.screenLocked = false;
     state.screenStatus = "hidden";
 
@@ -1049,9 +1016,6 @@
       ".shipexplorer-popup-variant-success{--shipexplorer-popup-accent:#74f28c;}",
       ".shipexplorer-screen-overlay{position:fixed;inset:0;width:100vw;height:100vh;margin:0;padding:0;background:#000;overflow:hidden;box-sizing:border-box;overscroll-behavior:contain;}",
       ".shipexplorer-screen-overlay[hidden]{display:none!important;}",
-      ".shipexplorer-screen-close{position:fixed;right:max(14px,env(safe-area-inset-right));bottom:max(14px,env(safe-area-inset-bottom));min-height:36px;border:1px solid rgba(215,227,223,.58);background:rgba(0,0,0,.72);color:#d7e3df;font-family:Consolas,'Courier New',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;padding:8px 10px;cursor:pointer;box-sizing:border-box;}",
-      ".shipexplorer-screen-close[hidden]{display:none!important;}",
-      ".shipexplorer-screen-close:hover{border-color:#44e0c0;color:#44e0c0;}",
       ".shipexplorer-video-overlay{position:fixed;inset:0;width:100vw;height:100vh;margin:0;padding:0;background:#6EA285;overflow:hidden;z-index:999999;isolation:isolate;box-sizing:border-box;overscroll-behavior:contain;}",
       ".shipexplorer-video-overlay[hidden]{display:none!important;}",
       ".shipexplorer-video-overlay:before{content:'';position:absolute;inset:0;background:#000;z-index:0;}",
@@ -1167,7 +1131,6 @@
     getVideoStatus: getVideoStatus,
     showRemoteScreen: showRemoteScreen,
     closeRemoteScreen: closeRemoteScreen,
-    closeScreenAndReturnToGame: closeScreenAndReturnToGame,
     getScreenStatus: getScreenStatus,
   };
 

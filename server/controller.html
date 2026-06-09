@@ -35,7 +35,7 @@
       background-size: 28px 28px, 28px 28px, auto;
       color: var(--white);
       font-family: Consolas, "Courier New", monospace;
-      padding: 68px 22px 22px;
+      padding: 22px;
     }
 
     main {
@@ -63,20 +63,24 @@
       min-width: 0;
     }
 
-    .controller-logo-shell {
+    .controller-logo-toggle {
       position: relative;
       flex: 0 0 auto;
       width: 72px;
       height: 72px;
       display: grid;
       place-items: center;
+      min-height: 72px;
+      padding: 0;
       border: 1px solid rgba(68, 224, 192, 0.56);
       background: radial-gradient(circle at 50% 50%, rgba(255, 122, 22, 0.14), rgba(13, 16, 17, 0.92) 64%);
+      color: var(--cyan);
       box-shadow: 0 0 0 1px rgba(68, 224, 192, 0.13), 0 0 24px rgba(68, 224, 192, 0.13);
+      cursor: pointer;
       overflow: hidden;
     }
 
-    .controller-logo-shell::after {
+    .controller-logo-toggle::after {
       content: "";
       position: absolute;
       inset: 6px;
@@ -89,7 +93,31 @@
       height: 58px;
       object-fit: contain;
       mix-blend-mode: screen;
-      filter: saturate(0.86) brightness(1.06) drop-shadow(0 0 10px rgba(255, 122, 22, 0.24));
+      filter: hue-rotate(144deg) saturate(1.35) brightness(1.1) drop-shadow(0 0 10px rgba(68, 224, 192, 0.28));
+    }
+
+    .controller-logo-fallback {
+      color: var(--cyan);
+      font-size: 18px;
+      font-weight: 900;
+      line-height: 0.88;
+      letter-spacing: 0.08em;
+      text-align: center;
+      text-shadow: 0 0 12px rgba(68, 224, 192, 0.38);
+    }
+
+    .controller-logo-toggle:hover,
+    .controller-logo-toggle:focus-visible {
+      border-color: var(--amber);
+      color: var(--amber);
+      background: radial-gradient(circle at 50% 50%, rgba(68, 224, 192, 0.14), rgba(13, 16, 17, 0.94) 64%);
+      outline: none;
+      box-shadow: 0 0 0 1px rgba(255, 122, 22, 0.2), 0 0 28px rgba(255, 122, 22, 0.16);
+    }
+
+    .controller-logo-toggle:hover .controller-logo,
+    .controller-logo-toggle:focus-visible .controller-logo {
+      filter: saturate(0.86) brightness(1.08) drop-shadow(0 0 10px rgba(255, 122, 22, 0.28));
     }
 
     h1 {
@@ -229,18 +257,6 @@
       color: rgba(127, 150, 149, 0.58);
     }
 
-    .fullscreen-toggle {
-      position: fixed;
-      top: max(12px, env(safe-area-inset-top));
-      left: max(12px, env(safe-area-inset-left));
-      z-index: 20;
-      min-width: 72px;
-      min-height: 38px;
-      padding: 8px 10px;
-      background: rgba(13, 16, 17, 0.94);
-      box-shadow: 0 0 0 1px rgba(68, 224, 192, 0.16), 0 10px 32px rgba(0, 0, 0, 0.38);
-    }
-
     .option {
       display: flex;
       align-items: center;
@@ -353,14 +369,13 @@
   </style>
 </head>
 <body>
-  <button id="fullscreenToggle" class="fullscreen-toggle" type="button" aria-label="Activar pantalla completa" aria-pressed="false">FULL</button>
-
   <main>
     <header>
       <div class="controller-brand">
-        <div class="controller-logo-shell" aria-hidden="true">
-          <img class="controller-logo" src="/assets/murderbot-logo.png" alt="">
-        </div>
+        <button id="murderbotFullscreenToggle" class="controller-logo-toggle" type="button" aria-label="Activar pantalla completa" aria-pressed="false">
+          <img class="controller-logo" src="assets/murderbot-logo.png" alt="Murderbot" onerror="this.hidden=true;this.nextElementSibling.hidden=false;">
+          <span class="controller-logo-fallback" hidden>MUR<br>DER<br>BOT</span>
+        </button>
         <div>
           <h1>ShipExplorer Control</h1>
           <p>Panel remoto para mostrar u ocultar el popup del frontend publico.</p>
@@ -482,7 +497,7 @@
     };
 
     const connectionState = document.querySelector("#connectionState");
-    const fullscreenToggle = document.querySelector("#fullscreenToggle");
+    const murderbotFullscreenToggle = document.querySelector("#murderbotFullscreenToggle");
     const tokenInput = document.querySelector("#token");
     const rememberTokenInput = document.querySelector("#rememberToken");
     const messageInput = document.querySelector("#message");
@@ -920,10 +935,9 @@
 
     function updateFullscreenToggle() {
       const active = Boolean(document.fullscreenElement);
-      fullscreenToggle.textContent = active ? "EXIT" : "FULL";
-      fullscreenToggle.setAttribute("aria-pressed", String(active));
-      fullscreenToggle.setAttribute("aria-label", active ? "Salir de pantalla completa" : "Activar pantalla completa");
-      fullscreenToggle.disabled = !document.fullscreenEnabled;
+      murderbotFullscreenToggle.setAttribute("aria-pressed", String(active));
+      murderbotFullscreenToggle.setAttribute("aria-label", active ? "Salir de pantalla completa" : "Activar pantalla completa");
+      murderbotFullscreenToggle.disabled = !document.fullscreenEnabled;
     }
 
     function addLog(message, kind) {
@@ -1007,7 +1021,7 @@
     durationInput.addEventListener("input", savePopupOptions);
     dismissibleInput.addEventListener("change", savePopupOptions);
 
-    fullscreenToggle.addEventListener("click", toggleFullscreen);
+    murderbotFullscreenToggle.addEventListener("click", toggleFullscreen);
     document.addEventListener("fullscreenchange", updateFullscreenToggle);
     showButton.addEventListener("click", () => showPopup());
     hideButton.addEventListener("click", hidePopup);
