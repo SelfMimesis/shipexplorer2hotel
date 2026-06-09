@@ -35,7 +35,7 @@
       background-size: 28px 28px, 28px 28px, auto;
       color: var(--white);
       font-family: Consolas, "Courier New", monospace;
-      padding: 22px;
+      padding: 68px 22px 22px;
     }
 
     main {
@@ -193,6 +193,18 @@
       color: rgba(127, 150, 149, 0.58);
     }
 
+    .fullscreen-toggle {
+      position: fixed;
+      top: max(12px, env(safe-area-inset-top));
+      left: max(12px, env(safe-area-inset-left));
+      z-index: 20;
+      min-width: 72px;
+      min-height: 38px;
+      padding: 8px 10px;
+      background: rgba(13, 16, 17, 0.94);
+      box-shadow: 0 0 0 1px rgba(68, 224, 192, 0.16), 0 10px 32px rgba(0, 0, 0, 0.38);
+    }
+
     .option {
       display: flex;
       align-items: center;
@@ -301,6 +313,8 @@
   </style>
 </head>
 <body>
+  <button id="fullscreenToggle" class="fullscreen-toggle" type="button" aria-label="Activar pantalla completa" aria-pressed="false">FULL</button>
+
   <main>
     <header>
       <div>
@@ -423,6 +437,7 @@
     };
 
     const connectionState = document.querySelector("#connectionState");
+    const fullscreenToggle = document.querySelector("#fullscreenToggle");
     const tokenInput = document.querySelector("#token");
     const rememberTokenInput = document.querySelector("#rememberToken");
     const messageInput = document.querySelector("#message");
@@ -463,6 +478,7 @@
 
     socketUrl.textContent = wsUrl;
     restoreForm();
+    updateFullscreenToggle();
     updateCommandButtons();
     connect();
 
@@ -843,6 +859,28 @@
       });
     }
 
+    async function toggleFullscreen() {
+      try {
+        if (!document.fullscreenElement) {
+          await document.documentElement.requestFullscreen();
+        } else {
+          await document.exitFullscreen();
+        }
+      } catch (error) {
+        addLog("pantalla completa no disponible", "error");
+      } finally {
+        updateFullscreenToggle();
+      }
+    }
+
+    function updateFullscreenToggle() {
+      const active = Boolean(document.fullscreenElement);
+      fullscreenToggle.textContent = active ? "EXIT" : "FULL";
+      fullscreenToggle.setAttribute("aria-pressed", String(active));
+      fullscreenToggle.setAttribute("aria-label", active ? "Salir de pantalla completa" : "Activar pantalla completa");
+      fullscreenToggle.disabled = !document.fullscreenEnabled;
+    }
+
     function addLog(message, kind) {
       const line = document.createElement("div");
       line.className = "log-line" + (kind ? " " + kind : "");
@@ -924,6 +962,8 @@
     durationInput.addEventListener("input", savePopupOptions);
     dismissibleInput.addEventListener("change", savePopupOptions);
 
+    fullscreenToggle.addEventListener("click", toggleFullscreen);
+    document.addEventListener("fullscreenchange", updateFullscreenToggle);
     showButton.addEventListener("click", () => showPopup());
     hideButton.addEventListener("click", hidePopup);
     testButton.addEventListener("click", sendTest);
