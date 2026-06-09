@@ -59,6 +59,14 @@ app.use(
   })
 );
 
+app.use(
+  "/assets",
+  express.static(path.join(__dirname, "assets"), {
+    immutable: true,
+    maxAge: "1y",
+  })
+);
+
 app.use((req, res, next) => {
   if (!isCorsEndpoint(req.path)) {
     return next();

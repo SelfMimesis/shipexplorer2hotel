@@ -49,11 +49,47 @@
     header {
       display: flex;
       gap: 14px;
-      align-items: start;
+      align-items: center;
       justify-content: space-between;
       border-bottom: 1px solid rgba(31, 125, 114, 0.6);
       padding-bottom: 16px;
       margin-bottom: 18px;
+    }
+
+    .controller-brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .controller-logo-shell {
+      position: relative;
+      flex: 0 0 auto;
+      width: 72px;
+      height: 72px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(68, 224, 192, 0.56);
+      background: radial-gradient(circle at 50% 50%, rgba(255, 122, 22, 0.14), rgba(13, 16, 17, 0.92) 64%);
+      box-shadow: 0 0 0 1px rgba(68, 224, 192, 0.13), 0 0 24px rgba(68, 224, 192, 0.13);
+      overflow: hidden;
+    }
+
+    .controller-logo-shell::after {
+      content: "";
+      position: absolute;
+      inset: 6px;
+      border: 1px solid rgba(31, 125, 114, 0.38);
+      pointer-events: none;
+    }
+
+    .controller-logo {
+      width: 58px;
+      height: 58px;
+      object-fit: contain;
+      mix-blend-mode: screen;
+      filter: saturate(0.86) brightness(1.06) drop-shadow(0 0 10px rgba(255, 122, 22, 0.24));
     }
 
     h1 {
@@ -306,6 +342,10 @@
         display: block;
       }
 
+      .controller-brand {
+        margin-bottom: 14px;
+      }
+
       .badge {
         margin-top: 14px;
       }
@@ -317,9 +357,14 @@
 
   <main>
     <header>
-      <div>
-        <h1>ShipExplorer Control</h1>
-        <p>Panel remoto para mostrar u ocultar el popup del frontend publico.</p>
+      <div class="controller-brand">
+        <div class="controller-logo-shell" aria-hidden="true">
+          <img class="controller-logo" src="/assets/murderbot-logo.png" alt="">
+        </div>
+        <div>
+          <h1>ShipExplorer Control</h1>
+          <p>Panel remoto para mostrar u ocultar el popup del frontend publico.</p>
+        </div>
       </div>
       <div id="connectionState" class="badge" data-state="DESCONECTADO">DESCONECTADO</div>
     </header>
