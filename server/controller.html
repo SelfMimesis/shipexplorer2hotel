@@ -383,6 +383,10 @@
       <strong>POPUP</strong> estado no recibido.
     </section>
 
+    <section id="videoDetailState" class="state">
+      <strong>VIDEO</strong> estado no recibido.
+    </section>
+
     <section class="logs" aria-live="polite">
       <strong>LOGS</strong>
       <div id="logs"></div>
@@ -419,6 +423,7 @@
     const video3Button = document.querySelector("#video3Button");
     const videoCloseButton = document.querySelector("#videoCloseButton");
     const popupState = document.querySelector("#popupState");
+    const videoDetailState = document.querySelector("#videoDetailState");
     const logs = document.querySelector("#logs");
 
     const RENDER_WS_URL = "wss://shipexplorer2.onrender.com/ws";
@@ -431,7 +436,7 @@
     let reconnectTimer = 0;
     let reconnectAttempt = 0;
     let manualClose = false;
-    let currentRemoteState = {};
+    let currentRemoteState = createEmptyRemoteState();
     const commandButtons = [showButton, hideButton, testButton, video1Button, video2Button, video3Button, videoCloseButton];
 
     socketUrl.textContent = wsUrl;
@@ -490,18 +495,22 @@
         return;
       }
 
+      if (data.type === "state:update") {
+        applyGroupedState(data.state);
+        renderRemoteState();
+        return;
+      }
+
       if (data.type === "popup:update") {
-        currentRemoteState = Object.assign({}, currentRemoteState, data);
-        renderPopupState(currentRemoteState);
-        renderVideoState(currentRemoteState);
+        applyPopupUpdate(data);
+        renderRemoteState();
         addLog("popup actualizado", "ok");
         return;
       }
 
       if (data.type === "video:update") {
-        currentRemoteState = Object.assign({}, currentRemoteState, data);
-        renderPopupState(currentRemoteState);
-        renderVideoState(currentRemoteState);
+        applyVideoUpdate(data);
+        renderRemoteState();
         return;
       }
 
@@ -509,6 +518,81 @@
         const message = data.message || "error del servidor";
         addLog(message.toLowerCase().includes("token") ? "token inválido" : message, "error");
       }
+    }
+
+    function createEmptyRemoteState() {
+      return {
+        popup: {
+          visible: false,
+          message: "",
+          title: "",
+          variant: "info",
+          durationMs: 0,
+          dismissible: true,
+          updatedAt: ""
+        },
+        video: {
+          visible: false,
+          id: "",
+          url: "",
+          updatedAt: ""
+        },
+        updatedAt: ""
+      };
+    }
+
+    function applyGroupedState(nextState) {
+      if (!nextState || typeof nextState !== "object") return;
+
+      const popup = nextState.popup && typeof nextState.popup === "object" ? nextState.popup : {};
+      const video = nextState.video && typeof nextState.video === "object" ? nextState.video : {};
+
+      currentRemoteState = {
+        popup: {
+          visible: Boolean(popup.visible),
+          message: typeof popup.message === "string" ? popup.message : "",
+          title: typeof popup.title === "string" ? popup.title : "",
+          variant: typeof popup.variant === "string" ? popup.variant : "info",
+          durationMs: currentRemoteState.popup.durationMs,
+          dismissible: currentRemoteState.popup.dismissible,
+          updatedAt: typeof popup.updatedAt === "string" ? popup.updatedAt : ""
+        },
+        video: {
+          visible: Boolean(video.visible),
+          id: typeof video.id === "string" ? video.id : "",
+          url: typeof video.url === "string" ? video.url : "",
+          updatedAt: typeof video.updatedAt === "string" ? video.updatedAt : ""
+        },
+        updatedAt: typeof nextState.updatedAt === "string" ? nextState.updatedAt : ""
+      };
+    }
+
+    function applyPopupUpdate(data) {
+      currentRemoteState.popup = {
+        visible: Boolean(data.popupVisible),
+        message: typeof data.popupMessage === "string" ? data.popupMessage : "",
+        title: typeof data.title === "string" ? data.title : "",
+        variant: typeof data.variant === "string" ? data.variant : "info",
+        durationMs: Number.isInteger(data.durationMs) ? data.durationMs : 0,
+        dismissible: data.dismissible !== false,
+        updatedAt: typeof data.updatedAt === "string" ? data.updatedAt : ""
+      };
+      currentRemoteState.updatedAt = currentRemoteState.popup.updatedAt || currentRemoteState.updatedAt;
+    }
+
+    function applyVideoUpdate(data) {
+      currentRemoteState.video = {
+        visible: Boolean(data.videoVisible),
+        id: typeof data.videoId === "string" ? data.videoId : "",
+        url: typeof data.videoUrl === "string" ? data.videoUrl : "",
+        updatedAt: typeof data.updatedAt === "string" ? data.updatedAt : ""
+      };
+      currentRemoteState.updatedAt = currentRemoteState.video.updatedAt || currentRemoteState.updatedAt;
+    }
+
+    function renderRemoteState() {
+      renderPopupState(currentRemoteState);
+      renderVideoState(currentRemoteState);
     }
 
     function sendCommand(command, successLog) {
@@ -601,7 +685,7 @@
         return;
       }
 
-      if (currentRemoteState.videoVisible && !window.confirm("Hay un video activo. Quieres cerrarlo?")) {
+      if (currentRemoteState.video.visible && !window.confirm("Hay un video activo. Quieres cerrarlo?")) {
         addLog("cerrar video cancelado");
         return;
       }
@@ -626,28 +710,36 @@
     }
 
     function renderPopupState(state) {
-      const visible = Boolean(state.popupVisible);
+      const popup = state.popup || {};
+      const visible = Boolean(popup.visible);
       popupState.innerHTML =
         "<strong>VISIBLE</strong> " + escapeHtml(visible ? "SI" : "NO") +
-        "<br><strong>TITULO</strong> " + escapeHtml(state.title || "") +
-        "<br><strong>VARIANTE</strong> " + escapeHtml(state.variant || "info") +
-        "<br><strong>DURACION</strong> " + escapeHtml(String(state.durationMs || 0)) +
-        "<br><strong>DISMISSIBLE</strong> " + escapeHtml(state.dismissible === false ? "NO" : "SI") +
-        "<br><strong>MENSAJE</strong> " + escapeHtml(state.popupMessage || "") +
-        "<br><strong>ACTUALIZADO</strong> " + escapeHtml(state.updatedAt || "");
+        "<br><strong>TITULO</strong> " + escapeHtml(popup.title || "") +
+        "<br><strong>VARIANTE</strong> " + escapeHtml(popup.variant || "info") +
+        "<br><strong>DURACION</strong> " + escapeHtml(String(popup.durationMs || 0)) +
+        "<br><strong>DISMISSIBLE</strong> " + escapeHtml(popup.dismissible === false ? "NO" : "SI") +
+        "<br><strong>MENSAJE</strong> " + escapeHtml(popup.message || "") +
+        "<br><strong>ACTUALIZADO</strong> " + escapeHtml(popup.updatedAt || "");
     }
 
     function renderVideoState(state) {
       const videoLabel = getVideoLabel(state);
       videoState.textContent = "VIDEO: " + videoLabel;
       videoState.dataset.active = String(videoLabel !== "OFF");
+      const video = state.video || {};
+      videoDetailState.innerHTML =
+        "<strong>VISIBLE</strong> " + escapeHtml(video.visible ? "SI" : "NO") +
+        "<br><strong>ID</strong> " + escapeHtml(video.id || "") +
+        "<br><strong>URL</strong> " + escapeHtml(video.url || "") +
+        "<br><strong>ACTUALIZADO</strong> " + escapeHtml(video.updatedAt || "");
     }
 
     function getVideoLabel(state) {
-      if (!state || !state.videoVisible) return "OFF";
-      if (state.videoId === "video1") return "VIDEO 1";
-      if (state.videoId === "video2") return "VIDEO 2";
-      if (state.videoId === "video3") return "VIDEO 3";
+      const video = state && state.video ? state.video : {};
+      if (!video.visible) return "OFF";
+      if (video.id === "video1") return "VIDEO 1";
+      if (video.id === "video2") return "VIDEO 2";
+      if (video.id === "video3") return "VIDEO 3";
       return "OFF";
     }
 

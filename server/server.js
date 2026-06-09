@@ -265,75 +265,93 @@ function handleWsMessage(client, data, isBinary) {
 }
 
 function setPopupState(popupVisible, popupOptions = {}) {
-  popupState = {
-    ...popupState,
-    popupVisible: Boolean(popupVisible),
-    popupMessage: popupVisible ? popupOptions.popupMessage : "",
-    title: popupVisible ? popupOptions.title : "",
-    variant: popupVisible ? popupOptions.variant : "info",
-    durationMs: popupVisible ? popupOptions.durationMs : 0,
-    dismissible: popupVisible ? popupOptions.dismissible : true,
-    updatedAt: new Date().toISOString(),
+  const updatedAt = new Date().toISOString();
+
+  remoteState = {
+    ...remoteState,
+    popup: {
+      visible: Boolean(popupVisible),
+      message: popupVisible ? popupOptions.popupMessage : "",
+      title: popupVisible ? popupOptions.title : "",
+      variant: popupVisible ? popupOptions.variant : "info",
+      durationMs: popupVisible ? popupOptions.durationMs : 0,
+      dismissible: popupVisible ? popupOptions.dismissible : true,
+      updatedAt,
+    },
+    updatedAt,
   };
 
   queueSavePopupState().catch((error) => {
     console.error("ERROR: Unable to persist popup state.", error);
   });
+  broadcastStateUpdate();
   broadcastPopupUpdate();
 }
 
 function setVideoState(videoVisible, videoId = "") {
   const normalizedVideoId = videoVisible ? videoId : "";
   if (normalizedVideoId && !VALID_VIDEO_IDS.has(normalizedVideoId)) return;
+  const updatedAt = new Date().toISOString();
 
-  popupState = {
-    ...popupState,
-    videoVisible: Boolean(videoVisible),
-    videoId: normalizedVideoId,
-    videoUrl: normalizedVideoId ? VIDEOS[normalizedVideoId] : "",
-    updatedAt: new Date().toISOString(),
+  remoteState = {
+    ...remoteState,
+    video: {
+      visible: Boolean(videoVisible),
+      id: normalizedVideoId,
+      url: normalizedVideoId ? VIDEOS[normalizedVideoId] : "",
+      updatedAt,
+    },
+    updatedAt,
   };
 
   queueSavePopupState().catch((error) => {
     console.error("ERROR: Unable to persist popup state.", error);
   });
+  broadcastStateUpdate();
   broadcastVideoUpdate();
 }
 
 function getPublicPopupState() {
   return {
-    popupVisible: popupState.popupVisible,
-    popupMessage: popupState.popupMessage,
-    title: popupState.title,
-    variant: popupState.variant,
-    durationMs: popupState.durationMs,
-    dismissible: popupState.dismissible,
-    videoVisible: popupState.videoVisible,
-    videoId: popupState.videoId,
-    videoUrl: popupState.videoUrl,
-    updatedAt: popupState.updatedAt,
+    state: getPublicRemoteState(),
+    popupVisible: remoteState.popup.visible,
+    popupMessage: remoteState.popup.message,
+    title: remoteState.popup.title,
+    variant: remoteState.popup.variant,
+    durationMs: remoteState.popup.durationMs,
+    dismissible: remoteState.popup.dismissible,
+    videoVisible: remoteState.video.visible,
+    videoId: remoteState.video.id,
+    videoUrl: remoteState.video.url,
+    updatedAt: remoteState.updatedAt,
   };
 }
 
 async function startServer() {
-  popupState = await loadPopupState();
+  remoteState = await loadPopupState();
 
   server.listen(PORT, HOST, () => {
     console.log(`${SERVICE_NAME} listening on ${HOST}:${PORT}`);
   });
 }
 
-function createDefaultPopupState() {
+function createDefaultRemoteState() {
   return {
-    popupVisible: false,
-    popupMessage: "",
-    title: "",
-    variant: "info",
-    durationMs: 0,
-    dismissible: true,
-    videoVisible: false,
-    videoId: "",
-    videoUrl: "",
+    popup: {
+      visible: false,
+      message: "",
+      title: "",
+      variant: "info",
+      durationMs: 0,
+      dismissible: true,
+      updatedAt: "",
+    },
+    video: {
+      visible: false,
+      id: "",
+      url: "",
+      updatedAt: "",
+    },
     updatedAt: "",
   };
 }
@@ -351,22 +369,20 @@ async function loadPopupState() {
     return normalizedState;
   } catch (error) {
     if (error.code === "ENOENT") {
-      const defaultState = createDefaultPopupState();
+      const defaultState = createDefaultRemoteState();
       await savePopupStateNow(defaultState);
       return defaultState;
     }
 
     await moveCorruptStateFile(error);
-    const defaultState = createDefaultPopupState();
+    const defaultState = createDefaultRemoteState();
     await savePopupStateNow(defaultState);
     return defaultState;
   }
 }
 
 function shouldPersistNormalizedState(original, normalized) {
-  const stateKeys = ["popupVisible", "popupMessage", "title", "variant", "durationMs", "dismissible", "videoVisible", "videoId", "videoUrl", "updatedAt"];
-
-  return stateKeys.some((key) => original[key] !== normalized[key]);
+  return JSON.stringify(original) !== JSON.stringify(normalized);
 }
 
 function normalizePopupState(candidate) {
@@ -374,51 +390,76 @@ function normalizePopupState(candidate) {
     throw new Error("Persisted popup state must be an object.");
   }
 
-  if (typeof candidate.popupVisible !== "boolean") {
-    throw new Error("Persisted popupVisible must be a boolean.");
+  const sourcePopup = candidate.popup && typeof candidate.popup === "object" && !Array.isArray(candidate.popup)
+    ? candidate.popup
+    : {
+        visible: candidate.popupVisible,
+        message: candidate.popupMessage,
+        title: candidate.title,
+        variant: candidate.variant,
+        durationMs: candidate.durationMs,
+        dismissible: candidate.dismissible,
+        updatedAt: candidate.updatedAt,
+      };
+  const sourceVideo = candidate.video && typeof candidate.video === "object" && !Array.isArray(candidate.video)
+    ? candidate.video
+    : {
+        visible: candidate.videoVisible,
+        id: candidate.videoId,
+        url: candidate.videoUrl,
+        updatedAt: candidate.updatedAt,
+      };
+
+  if (typeof sourcePopup.visible !== "boolean") {
+    throw new Error("Persisted popup.visible must be a boolean.");
   }
 
-  if (typeof candidate.popupMessage !== "string") {
-    throw new Error("Persisted popupMessage must be a string.");
+  if (typeof sourcePopup.message !== "string") {
+    throw new Error("Persisted popup.message must be a string.");
   }
 
-  if ([...candidate.popupMessage].length > MAX_POPUP_MESSAGE_LENGTH) {
-    throw new Error(`Persisted popupMessage exceeds ${MAX_POPUP_MESSAGE_LENGTH} characters.`);
+  if ([...sourcePopup.message].length > MAX_POPUP_MESSAGE_LENGTH) {
+    throw new Error(`Persisted popup.message exceeds ${MAX_POPUP_MESSAGE_LENGTH} characters.`);
   }
 
-  const popupMessage = sanitizePopupText(candidate.popupMessage);
-  const title = typeof candidate.title === "string" ? sanitizePopupText(candidate.title) : "";
+  const popupMessage = sanitizePopupText(sourcePopup.message);
+  const title = typeof sourcePopup.title === "string" ? sanitizePopupText(sourcePopup.title) : "";
   if ([...title].length > MAX_POPUP_TITLE_LENGTH) {
     throw new Error(`Persisted title exceeds ${MAX_POPUP_TITLE_LENGTH} characters.`);
   }
 
-  const variant = typeof candidate.variant === "string" && VALID_VARIANTS.has(candidate.variant) ? candidate.variant : "info";
-  const durationMs = Number.isInteger(candidate.durationMs) && candidate.durationMs >= 0 && candidate.durationMs <= MAX_POPUP_DURATION_MS ? candidate.durationMs : 0;
-  const dismissible = typeof candidate.dismissible === "boolean" ? candidate.dismissible : true;
-  const videoVisible = typeof candidate.videoVisible === "boolean" ? candidate.videoVisible : false;
-  const rawVideoId = typeof candidate.videoId === "string" ? candidate.videoId : "";
+  const variant = typeof sourcePopup.variant === "string" && VALID_VARIANTS.has(sourcePopup.variant) ? sourcePopup.variant : "info";
+  const durationMs = Number.isInteger(sourcePopup.durationMs) && sourcePopup.durationMs >= 0 && sourcePopup.durationMs <= MAX_POPUP_DURATION_MS ? sourcePopup.durationMs : 0;
+  const dismissible = typeof sourcePopup.dismissible === "boolean" ? sourcePopup.dismissible : true;
+  const videoVisible = typeof sourceVideo.visible === "boolean" ? sourceVideo.visible : false;
+  const rawVideoId = typeof sourceVideo.id === "string" ? sourceVideo.id : "";
 
   if (videoVisible && !VALID_VIDEO_IDS.has(rawVideoId)) {
-    throw new Error("Persisted videoId must be video1, video2, or video3 when videoVisible is true.");
+    throw new Error("Persisted video.id must be video1, video2, or video3 when video.visible is true.");
   }
 
   const videoId = videoVisible ? rawVideoId : "";
-
-  if (typeof candidate.updatedAt !== "string") {
-    throw new Error("Persisted updatedAt must be a string.");
-  }
+  const popupUpdatedAt = typeof sourcePopup.updatedAt === "string" ? sourcePopup.updatedAt : "";
+  const videoUpdatedAt = typeof sourceVideo.updatedAt === "string" ? sourceVideo.updatedAt : "";
+  const updatedAt = typeof candidate.updatedAt === "string" ? candidate.updatedAt : popupUpdatedAt || videoUpdatedAt;
 
   return {
-    popupVisible: candidate.popupVisible,
-    popupMessage: candidate.popupVisible ? popupMessage : "",
-    title: candidate.popupVisible ? title : "",
-    variant: candidate.popupVisible ? variant : "info",
-    durationMs: candidate.popupVisible ? durationMs : 0,
-    dismissible: candidate.popupVisible ? dismissible : true,
-    videoVisible,
-    videoId,
-    videoUrl: videoId ? VIDEOS[videoId] : "",
-    updatedAt: candidate.updatedAt,
+    popup: {
+      visible: sourcePopup.visible,
+      message: sourcePopup.visible ? popupMessage : "",
+      title: sourcePopup.visible ? title : "",
+      variant: sourcePopup.visible ? variant : "info",
+      durationMs: sourcePopup.visible ? durationMs : 0,
+      dismissible: sourcePopup.visible ? dismissible : true,
+      updatedAt: popupUpdatedAt,
+    },
+    video: {
+      visible: videoVisible,
+      id: videoId,
+      url: videoId ? VIDEOS[videoId] : "",
+      updatedAt: videoUpdatedAt,
+    },
+    updatedAt,
   };
 }
 
@@ -437,7 +478,7 @@ async function moveCorruptStateFile(error) {
 }
 
 function queueSavePopupState() {
-  const snapshot = getPublicPopupState();
+  const snapshot = remoteState;
 
   saveQueue = saveQueue
     .catch(() => {})
@@ -458,18 +499,64 @@ async function savePopupStateNow(stateToSave) {
 function buildPopupUpdate() {
   return {
     type: "popup:update",
-    ...getPublicPopupState(),
+    popupVisible: remoteState.popup.visible,
+    popupMessage: remoteState.popup.message,
+    title: remoteState.popup.title,
+    variant: remoteState.popup.variant,
+    durationMs: remoteState.popup.durationMs,
+    dismissible: remoteState.popup.dismissible,
+    updatedAt: remoteState.popup.updatedAt,
   };
 }
 
 function buildVideoUpdate() {
   return {
     type: "video:update",
-    videoVisible: popupState.videoVisible,
-    videoId: popupState.videoId,
-    videoUrl: popupState.videoUrl,
-    updatedAt: popupState.updatedAt,
+    videoVisible: remoteState.video.visible,
+    videoId: remoteState.video.id,
+    videoUrl: remoteState.video.url,
+    updatedAt: remoteState.video.updatedAt,
   };
+}
+
+function buildStateUpdate() {
+  return {
+    type: "state:update",
+    state: getPublicRemoteState(),
+  };
+}
+
+function getPublicRemoteState() {
+  return {
+    popup: {
+      visible: remoteState.popup.visible,
+      message: remoteState.popup.message,
+      title: remoteState.popup.title,
+      variant: remoteState.popup.variant,
+      updatedAt: remoteState.popup.updatedAt,
+    },
+    video: {
+      visible: remoteState.video.visible,
+      id: remoteState.video.id,
+      url: remoteState.video.url,
+      updatedAt: remoteState.video.updatedAt,
+    },
+    updatedAt: remoteState.updatedAt,
+  };
+}
+
+function sendCurrentState(ws) {
+  sendJson(ws, buildStateUpdate());
+  sendJson(ws, buildPopupUpdate());
+  sendJson(ws, buildVideoUpdate());
+}
+
+function broadcastStateUpdate() {
+  const message = buildStateUpdate();
+
+  for (const client of clients) {
+    sendJson(client.ws, message);
+  }
 }
 
 function broadcastPopupUpdate() {

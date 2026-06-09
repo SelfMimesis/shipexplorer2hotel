@@ -142,6 +142,11 @@
     var payload = parseJson(event.data);
     if (!payload || typeof payload !== "object") return;
 
+    if (payload.type === "state:update") {
+      applyStateUpdate(payload.state);
+      return;
+    }
+
     if (payload.type === "popup:update") {
       applyPopupUpdate(payload);
       if ("videoVisible" in payload || "videoId" in payload || "videoUrl" in payload) {
@@ -152,6 +157,36 @@
 
     if (payload.type === "video:update") {
       applyVideoUpdate(payload);
+    }
+  }
+
+  function applyStateUpdate(nextState) {
+    if (!nextState || typeof nextState !== "object") return;
+
+    var popup = nextState.popup && typeof nextState.popup === "object" ? nextState.popup : null;
+    var video = nextState.video && typeof nextState.video === "object" ? nextState.video : null;
+
+    if (popup) {
+      applyPopupUpdate({
+        type: "popup:update",
+        popupVisible: Boolean(popup.visible),
+        popupMessage: typeof popup.message === "string" ? popup.message : "",
+        title: typeof popup.title === "string" ? popup.title : "",
+        variant: typeof popup.variant === "string" ? popup.variant : "info",
+        durationMs: Number.isInteger(popup.durationMs) ? popup.durationMs : state.durationMs,
+        dismissible: typeof popup.dismissible === "boolean" ? popup.dismissible : state.dismissible,
+        updatedAt: typeof popup.updatedAt === "string" ? popup.updatedAt : "",
+      });
+    }
+
+    if (video) {
+      applyVideoUpdate({
+        type: "video:update",
+        videoVisible: Boolean(video.visible),
+        videoId: typeof video.id === "string" ? video.id : "",
+        videoUrl: typeof video.url === "string" ? video.url : "",
+        updatedAt: typeof video.updatedAt === "string" ? video.updatedAt : "",
+      });
     }
   }
 

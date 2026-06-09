@@ -1,12 +1,18 @@
-﻿{
-  "popupVisible": false,
-  "popupMessage": "",
-  "title": "",
-  "variant": "info",
-  "durationMs": 0,
-  "dismissible": true,
-  "videoVisible": false,
-  "videoId": "",
-  "videoUrl": "",
+{
+  "popup": {
+    "visible": false,
+    "message": "",
+    "title": "",
+    "variant": "info",
+    "durationMs": 0,
+    "dismissible": true,
+    "updatedAt": ""
+  },
+  "video": {
+    "visible": false,
+    "id": "",
+    "url": "",
+    "updatedAt": ""
+  },
   "updatedAt": ""
 }
