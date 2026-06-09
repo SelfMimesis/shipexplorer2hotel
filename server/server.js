@@ -45,7 +45,7 @@ if (!ADMIN_TOKEN) {
 
 const allowedOrigins = parseAllowedOrigins(process.env.ALLOWED_ORIGINS || "");
 const allowedOriginSet = new Set([...allowedOrigins, ...(NODE_ENV === "development" ? DEV_ALLOWED_ORIGINS : [])]);
-let popupState = createDefaultPopupState();
+let remoteState = createDefaultRemoteState();
 let saveQueue = Promise.resolve();
 
 const app = express();
@@ -154,8 +154,7 @@ wss.on("connection", (ws, req) => {
     clients.delete(client);
   });
 
-  sendJson(ws, buildPopupUpdate());
-  sendJson(ws, buildVideoUpdate());
+  sendCurrentState(ws);
 });
 
 const heartbeat = setInterval(() => {
@@ -216,8 +215,7 @@ function handleWsMessage(client, data, isBinary) {
   }
 
   if (payload.type === "state:get") {
-    sendJson(client.ws, buildPopupUpdate());
-    sendJson(client.ws, buildVideoUpdate());
+    sendCurrentState(client.ws);
     return;
   }
 
