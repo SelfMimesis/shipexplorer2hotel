@@ -5,5 +5,8 @@
   "variant": "info",
   "durationMs": 0,
   "dismissible": true,
+  "videoVisible": false,
+  "videoId": "",
+  "videoUrl": "",
   "updatedAt": ""
 }

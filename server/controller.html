@@ -70,6 +70,14 @@
       line-height: 1.5;
     }
 
+    h2 {
+      margin: 0;
+      color: var(--cyan);
+      font-size: 15px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
     .badge {
       min-width: 148px;
       border: 1px solid var(--teal);
@@ -172,6 +180,19 @@
       border-color: var(--red);
     }
 
+    button:disabled {
+      border-color: rgba(127, 150, 149, 0.42);
+      background: rgba(127, 150, 149, 0.08);
+      color: rgba(127, 150, 149, 0.58);
+      cursor: not-allowed;
+    }
+
+    button:disabled:hover {
+      border-color: rgba(127, 150, 149, 0.42);
+      background: rgba(127, 150, 149, 0.08);
+      color: rgba(127, 150, 149, 0.58);
+    }
+
     .option {
       display: flex;
       align-items: center;
@@ -198,6 +219,35 @@
       color: var(--muted);
       font-size: 12px;
       margin-top: 8px;
+    }
+
+    .panel-section {
+      border-top: 1px solid rgba(31, 125, 114, 0.6);
+      margin-top: 22px;
+      padding-top: 18px;
+    }
+
+    .section-heading {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .video-status {
+      border: 1px solid rgba(31, 125, 114, 0.7);
+      background: var(--deep);
+      color: var(--amber);
+      padding: 9px 12px;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .video-status[data-active="true"] {
+      border-color: var(--cyan);
+      color: var(--cyan);
     }
 
     .state,
@@ -315,6 +365,20 @@
       <button id="testButton" type="button">ENVIAR TEST</button>
     </div>
 
+    <section class="panel-section" aria-labelledby="videoControlTitle">
+      <div class="section-heading">
+        <h2 id="videoControlTitle">VIDEO CONTROL</h2>
+        <div id="videoState" class="video-status" data-active="false">VIDEO: OFF</div>
+      </div>
+
+      <div class="controls">
+        <button id="video1Button" type="button">VIDEO 1</button>
+        <button id="video2Button" type="button">VIDEO 2</button>
+        <button id="video3Button" type="button">VIDEO 3</button>
+        <button id="videoCloseButton" class="danger" type="button">CERRAR VIDEO</button>
+      </div>
+    </section>
+
     <section id="popupState" class="state">
       <strong>POPUP</strong> estado no recibido.
     </section>
@@ -349,6 +413,11 @@
     const showButton = document.querySelector("#showButton");
     const hideButton = document.querySelector("#hideButton");
     const testButton = document.querySelector("#testButton");
+    const videoState = document.querySelector("#videoState");
+    const video1Button = document.querySelector("#video1Button");
+    const video2Button = document.querySelector("#video2Button");
+    const video3Button = document.querySelector("#video3Button");
+    const videoCloseButton = document.querySelector("#videoCloseButton");
     const popupState = document.querySelector("#popupState");
     const logs = document.querySelector("#logs");
 
@@ -362,9 +431,12 @@
     let reconnectTimer = 0;
     let reconnectAttempt = 0;
     let manualClose = false;
+    let currentRemoteState = {};
+    const commandButtons = [showButton, hideButton, testButton, video1Button, video2Button, video3Button, videoCloseButton];
 
     socketUrl.textContent = wsUrl;
     restoreForm();
+    updateCommandButtons();
     connect();
 
     function connect() {
@@ -379,6 +451,7 @@
       }
 
       socket = new WebSocket(wsUrl);
+      updateCommandButtons();
 
       socket.addEventListener("open", () => {
         reconnectAttempt = 0;
@@ -393,7 +466,7 @@
 
       socket.addEventListener("error", () => {
         setConnectionState("ERROR");
-        addLog("error de conexion", "error");
+        addLog("error de conexión", "error");
       });
 
       socket.addEventListener("message", (event) => {
@@ -418,28 +491,36 @@
       }
 
       if (data.type === "popup:update") {
-        renderPopupState(data);
+        currentRemoteState = Object.assign({}, currentRemoteState, data);
+        renderPopupState(currentRemoteState);
+        renderVideoState(currentRemoteState);
         addLog("popup actualizado", "ok");
+        return;
+      }
+
+      if (data.type === "video:update") {
+        currentRemoteState = Object.assign({}, currentRemoteState, data);
+        renderPopupState(currentRemoteState);
+        renderVideoState(currentRemoteState);
         return;
       }
 
       if (data.type === "error") {
         const message = data.message || "error del servidor";
-        addLog(message.toLowerCase().includes("token") ? "error token invalido" : message, "error");
-        setConnectionState("ERROR");
+        addLog(message.toLowerCase().includes("token") ? "token inválido" : message, "error");
       }
     }
 
-    function sendCommand(command) {
+    function sendCommand(command, successLog) {
       if (!socket || socket.readyState !== WebSocket.OPEN) {
-        addLog("no conectado", "error");
+        addLog("error de conexión", "error");
         setConnectionState("DESCONECTADO");
         scheduleReconnect();
         return;
       }
 
       socket.send(JSON.stringify(command));
-      addLog("comando enviado", "ok");
+      addLog(successLog || "comando enviado", "ok");
     }
 
     function showPopup(messageOverride) {
@@ -490,6 +571,47 @@
       });
     }
 
+    function playVideo(videoId) {
+      const token = tokenInput.value.trim();
+      const labels = {
+        video1: "video 1 enviado",
+        video2: "video 2 enviado",
+        video3: "video 3 enviado"
+      };
+      saveTokenPreference();
+
+      if (!token) {
+        addLog("token requerido", "error");
+        return;
+      }
+
+      sendCommand({
+        type: "video:play",
+        token,
+        videoId
+      }, labels[videoId] || "video enviado");
+    }
+
+    function closeVideo() {
+      const token = tokenInput.value.trim();
+      saveTokenPreference();
+
+      if (!token) {
+        addLog("token requerido", "error");
+        return;
+      }
+
+      if (currentRemoteState.videoVisible && !window.confirm("Hay un video activo. Quieres cerrarlo?")) {
+        addLog("cerrar video cancelado");
+        return;
+      }
+
+      sendCommand({
+        type: "video:close",
+        token
+      }, "cerrar video enviado");
+    }
+
     function sendTest() {
       const testMessage = "SHIP POPUP TEST " + new Date().toLocaleTimeString();
       messageInput.value = testMessage;
@@ -515,9 +637,31 @@
         "<br><strong>ACTUALIZADO</strong> " + escapeHtml(state.updatedAt || "");
     }
 
+    function renderVideoState(state) {
+      const videoLabel = getVideoLabel(state);
+      videoState.textContent = "VIDEO: " + videoLabel;
+      videoState.dataset.active = String(videoLabel !== "OFF");
+    }
+
+    function getVideoLabel(state) {
+      if (!state || !state.videoVisible) return "OFF";
+      if (state.videoId === "video1") return "VIDEO 1";
+      if (state.videoId === "video2") return "VIDEO 2";
+      if (state.videoId === "video3") return "VIDEO 3";
+      return "OFF";
+    }
+
     function setConnectionState(state) {
       connectionState.textContent = state;
       connectionState.dataset.state = state;
+      updateCommandButtons();
+    }
+
+    function updateCommandButtons() {
+      const connected = Boolean(socket && socket.readyState === WebSocket.OPEN);
+      commandButtons.forEach((button) => {
+        button.disabled = !connected;
+      });
     }
 
     function addLog(message, kind) {
@@ -604,6 +748,10 @@
     showButton.addEventListener("click", () => showPopup());
     hideButton.addEventListener("click", hidePopup);
     testButton.addEventListener("click", sendTest);
+    video1Button.addEventListener("click", () => playVideo("video1"));
+    video2Button.addEventListener("click", () => playVideo("video2"));
+    video3Button.addEventListener("click", () => playVideo("video3"));
+    videoCloseButton.addEventListener("click", closeVideo);
 
     window.addEventListener("beforeunload", () => {
       manualClose = true;

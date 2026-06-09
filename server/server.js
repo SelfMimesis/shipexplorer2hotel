@@ -16,7 +16,13 @@ const MAX_POPUP_DURATION_MS = 2147483647;
 const MAX_WS_PAYLOAD_BYTES = 2048;
 const MAX_WS_FRAME_BYTES = 4096;
 const STATE_PATH = path.join(__dirname, "state.json");
+const VIDEOS = {
+  video1: process.env.VIDEO_1_URL || "/videos/video1.mp4",
+  video2: process.env.VIDEO_2_URL || "/videos/video2.mp4",
+  video3: process.env.VIDEO_3_URL || "/videos/video3.mp4",
+};
 const VALID_VARIANTS = new Set(["info", "warning", "danger", "success"]);
+const VALID_VIDEO_IDS = new Set(Object.keys(VIDEOS));
 const DEV_ALLOWED_ORIGINS = [
   "http://localhost:8080",
   "http://127.0.0.1:8080",
@@ -44,6 +50,14 @@ let saveQueue = Promise.resolve();
 
 const app = express();
 app.disable("x-powered-by");
+
+app.use(
+  "/videos",
+  express.static(path.join(__dirname, "videos"), {
+    immutable: true,
+    maxAge: "1y",
+  })
+);
 
 app.use((req, res, next) => {
   if (!isCorsEndpoint(req.path)) {
@@ -141,6 +155,7 @@ wss.on("connection", (ws, req) => {
   });
 
   sendJson(ws, buildPopupUpdate());
+  sendJson(ws, buildVideoUpdate());
 });
 
 const heartbeat = setInterval(() => {
@@ -202,10 +217,11 @@ function handleWsMessage(client, data, isBinary) {
 
   if (payload.type === "state:get") {
     sendJson(client.ws, buildPopupUpdate());
+    sendJson(client.ws, buildVideoUpdate());
     return;
   }
 
-  if (payload.type !== "popup:show" && payload.type !== "popup:hide") {
+  if (!isAdminCommandType(payload.type)) {
     sendError(client.ws, "BAD_REQUEST", "Mensaje inválido");
     return;
   }
@@ -231,11 +247,28 @@ function handleWsMessage(client, data, isBinary) {
     return;
   }
 
-  setPopupState(false);
+  if (payload.type === "popup:hide") {
+    setPopupState(false);
+    return;
+  }
+
+  if (payload.type === "video:play") {
+    const parsedVideo = parseVideoPlayPayload(payload);
+    if (!parsedVideo.ok) {
+      sendError(client.ws, "BAD_REQUEST", "Mensaje inválido");
+      return;
+    }
+
+    setVideoState(true, parsedVideo.videoId);
+    return;
+  }
+
+  setVideoState(false);
 }
 
 function setPopupState(popupVisible, popupOptions = {}) {
   popupState = {
+    ...popupState,
     popupVisible: Boolean(popupVisible),
     popupMessage: popupVisible ? popupOptions.popupMessage : "",
     title: popupVisible ? popupOptions.title : "",
@@ -251,6 +284,24 @@ function setPopupState(popupVisible, popupOptions = {}) {
   broadcastPopupUpdate();
 }
 
+function setVideoState(videoVisible, videoId = "") {
+  const normalizedVideoId = videoVisible ? videoId : "";
+  if (normalizedVideoId && !VALID_VIDEO_IDS.has(normalizedVideoId)) return;
+
+  popupState = {
+    ...popupState,
+    videoVisible: Boolean(videoVisible),
+    videoId: normalizedVideoId,
+    videoUrl: normalizedVideoId ? VIDEOS[normalizedVideoId] : "",
+    updatedAt: new Date().toISOString(),
+  };
+
+  queueSavePopupState().catch((error) => {
+    console.error("ERROR: Unable to persist popup state.", error);
+  });
+  broadcastVideoUpdate();
+}
+
 function getPublicPopupState() {
   return {
     popupVisible: popupState.popupVisible,
@@ -259,6 +310,9 @@ function getPublicPopupState() {
     variant: popupState.variant,
     durationMs: popupState.durationMs,
     dismissible: popupState.dismissible,
+    videoVisible: popupState.videoVisible,
+    videoId: popupState.videoId,
+    videoUrl: popupState.videoUrl,
     updatedAt: popupState.updatedAt,
   };
 }
@@ -279,6 +333,9 @@ function createDefaultPopupState() {
     variant: "info",
     durationMs: 0,
     dismissible: true,
+    videoVisible: false,
+    videoId: "",
+    videoUrl: "",
     updatedAt: "",
   };
 }
@@ -287,7 +344,13 @@ async function loadPopupState() {
   try {
     const raw = await fs.readFile(STATE_PATH, "utf8");
     const loaded = JSON.parse(raw.replace(/^\uFEFF/, ""));
-    return normalizePopupState(loaded);
+    const normalizedState = normalizePopupState(loaded);
+
+    if (shouldPersistNormalizedState(loaded, normalizedState)) {
+      await savePopupStateNow(normalizedState);
+    }
+
+    return normalizedState;
   } catch (error) {
     if (error.code === "ENOENT") {
       const defaultState = createDefaultPopupState();
@@ -300,6 +363,12 @@ async function loadPopupState() {
     await savePopupStateNow(defaultState);
     return defaultState;
   }
+}
+
+function shouldPersistNormalizedState(original, normalized) {
+  const stateKeys = ["popupVisible", "popupMessage", "title", "variant", "durationMs", "dismissible", "videoVisible", "videoId", "videoUrl", "updatedAt"];
+
+  return stateKeys.some((key) => original[key] !== normalized[key]);
 }
 
 function normalizePopupState(candidate) {
@@ -328,6 +397,14 @@ function normalizePopupState(candidate) {
   const variant = typeof candidate.variant === "string" && VALID_VARIANTS.has(candidate.variant) ? candidate.variant : "info";
   const durationMs = Number.isInteger(candidate.durationMs) && candidate.durationMs >= 0 && candidate.durationMs <= MAX_POPUP_DURATION_MS ? candidate.durationMs : 0;
   const dismissible = typeof candidate.dismissible === "boolean" ? candidate.dismissible : true;
+  const videoVisible = typeof candidate.videoVisible === "boolean" ? candidate.videoVisible : false;
+  const rawVideoId = typeof candidate.videoId === "string" ? candidate.videoId : "";
+
+  if (videoVisible && !VALID_VIDEO_IDS.has(rawVideoId)) {
+    throw new Error("Persisted videoId must be video1, video2, or video3 when videoVisible is true.");
+  }
+
+  const videoId = videoVisible ? rawVideoId : "";
 
   if (typeof candidate.updatedAt !== "string") {
     throw new Error("Persisted updatedAt must be a string.");
@@ -340,6 +417,9 @@ function normalizePopupState(candidate) {
     variant: candidate.popupVisible ? variant : "info",
     durationMs: candidate.popupVisible ? durationMs : 0,
     dismissible: candidate.popupVisible ? dismissible : true,
+    videoVisible,
+    videoId,
+    videoUrl: videoId ? VIDEOS[videoId] : "",
     updatedAt: candidate.updatedAt,
   };
 }
@@ -384,8 +464,26 @@ function buildPopupUpdate() {
   };
 }
 
+function buildVideoUpdate() {
+  return {
+    type: "video:update",
+    videoVisible: popupState.videoVisible,
+    videoId: popupState.videoId,
+    videoUrl: popupState.videoUrl,
+    updatedAt: popupState.updatedAt,
+  };
+}
+
 function broadcastPopupUpdate() {
   const message = buildPopupUpdate();
+
+  for (const client of clients) {
+    sendJson(client.ws, message);
+  }
+}
+
+function broadcastVideoUpdate() {
+  const message = buildVideoUpdate();
 
   for (const client of clients) {
     sendJson(client.ws, message);
@@ -399,6 +497,10 @@ function sendJson(ws, payload) {
 
 function sendError(ws, code, message) {
   sendJson(ws, { type: "error", code, message });
+}
+
+function isAdminCommandType(type) {
+  return type === "popup:show" || type === "popup:hide" || type === "video:play" || type === "video:close";
 }
 
 function parsePopupShowPayload(payload) {
@@ -449,6 +551,21 @@ function parsePopupShowPayload(payload) {
       durationMs,
       dismissible,
     },
+  };
+}
+
+function parseVideoPlayPayload(payload) {
+  if (Object.prototype.hasOwnProperty.call(payload, "videoUrl")) {
+    return { ok: false };
+  }
+
+  if (typeof payload.videoId !== "string" || !VALID_VIDEO_IDS.has(payload.videoId)) {
+    return { ok: false };
+  }
+
+  return {
+    ok: true,
+    videoId: payload.videoId,
   };
 }
 
