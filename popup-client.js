@@ -14,6 +14,9 @@
     videoCloseHoldMs: 150,
     videoLoadTimeoutMs: 8000,
     videoBackground: "#6EA285",
+    screenZIndex: 999998,
+    screenCloseZIndex: 1000000,
+    screenBackground: "#000000",
     allowSoundAfterTap: false,
   };
 
@@ -39,6 +42,9 @@
     videoStatus: "hidden",
     videoMuted: true,
     videoError: "",
+    screenLocked: false,
+    screenStatus: "hidden",
+    screenLocalHidden: false,
     updatedAt: "",
     localHidden: false,
     reconnectAttempt: 0,
@@ -51,13 +57,17 @@
   var manuallyClosed = false;
   var currentServerKey = "";
   var currentVideoKey = "";
+  var currentScreenKey = "";
   var videoRequestId = 0;
   var autoHideTimer = 0;
   var videoHideTimer = 0;
   var videoTransitionTimer = 0;
   var overlay = null;
+  var screenOverlay = null;
+  var screenCloseButton = null;
   var videoOverlay = null;
   var videoElement = null;
+  var standbyVideoElement = null;
   var videoStatusNode = null;
   var videoCloseButton = null;
   var titleNode = null;
@@ -70,17 +80,22 @@
 
   function init(userOptions) {
     options = mergeOptions(DEFAULT_OPTIONS, userOptions || {});
+    var hasCustomScreenZIndex = Boolean(userOptions && Object.prototype.hasOwnProperty.call(userOptions, "screenZIndex"));
+    var hasCustomScreenCloseZIndex = Boolean(userOptions && Object.prototype.hasOwnProperty.call(userOptions, "screenCloseZIndex"));
     options.autoReconnect = options.autoReconnect !== false;
     options.showCloseButton = options.showCloseButton !== false;
     options.zIndex = Number.isFinite(Number(options.zIndex)) ? Number(options.zIndex) : DEFAULT_OPTIONS.zIndex;
     options.theme = VALID_THEMES[options.theme] ? options.theme : DEFAULT_OPTIONS.theme;
     options.videoZIndex = Number.isFinite(Number(options.videoZIndex)) ? Number(options.videoZIndex) : Math.max(DEFAULT_OPTIONS.videoZIndex, options.zIndex + 1);
+    options.screenZIndex = hasCustomScreenZIndex && Number.isFinite(Number(options.screenZIndex)) ? Number(options.screenZIndex) : Math.max(1, options.videoZIndex - 1);
+    options.screenCloseZIndex = hasCustomScreenCloseZIndex && Number.isFinite(Number(options.screenCloseZIndex)) ? Number(options.screenCloseZIndex) : options.videoZIndex + 1;
     options.videoMuted = options.videoMuted !== false;
     options.videoLoop = options.videoLoop === true;
     options.videoFadeMs = normalizeVideoDuration(options.videoFadeMs, DEFAULT_OPTIONS.videoFadeMs);
     options.videoCloseHoldMs = normalizeVideoDuration(options.videoCloseHoldMs, DEFAULT_OPTIONS.videoCloseHoldMs);
     options.videoLoadTimeoutMs = normalizeVideoDuration(options.videoLoadTimeoutMs, DEFAULT_OPTIONS.videoLoadTimeoutMs);
     options.videoBackground = typeof options.videoBackground === "string" && options.videoBackground ? options.videoBackground : DEFAULT_OPTIONS.videoBackground;
+    options.screenBackground = typeof options.screenBackground === "string" && options.screenBackground ? options.screenBackground : DEFAULT_OPTIONS.screenBackground;
     options.allowSoundAfterTap = options.allowSoundAfterTap === true;
     options.socketUrl = options.socketUrl || getDefaultSocketUrl();
 
@@ -90,6 +105,7 @@
 
     whenReady(function () {
       injectStyles();
+      createScreenDom();
       createPopupDom();
       createVideoDom();
       setupVideoSoundUnlock();
@@ -157,6 +173,11 @@
 
     if (payload.type === "video:update") {
       applyVideoUpdate(payload);
+      return;
+    }
+
+    if (payload.type === "screen:update") {
+      applyScreenUpdate(payload);
     }
   }
 
@@ -165,6 +186,7 @@
 
     var popup = nextState.popup && typeof nextState.popup === "object" ? nextState.popup : null;
     var video = nextState.video && typeof nextState.video === "object" ? nextState.video : null;
+    var screen = nextState.screen && typeof nextState.screen === "object" ? nextState.screen : null;
 
     if (popup) {
       applyPopupUpdate({
@@ -186,6 +208,14 @@
         videoId: typeof video.id === "string" ? video.id : "",
         videoUrl: typeof video.url === "string" ? video.url : "",
         updatedAt: typeof video.updatedAt === "string" ? video.updatedAt : "",
+      });
+    }
+
+    if (screen) {
+      applyScreenUpdate({
+        type: "screen:update",
+        screenLocked: Boolean(screen.locked),
+        updatedAt: typeof screen.updatedAt === "string" ? screen.updatedAt : "",
       });
     }
   }
@@ -284,6 +314,24 @@
     playRemoteVideo(videoId, videoUrl);
   }
 
+  function applyScreenUpdate(payload) {
+    var locked = Boolean(payload.screenLocked);
+    var updatedAt = typeof payload.updatedAt === "string" ? payload.updatedAt : "";
+    var nextKey = [locked ? "1" : "0", updatedAt].join("|");
+
+    if (nextKey === currentScreenKey) return;
+    currentScreenKey = nextKey;
+
+    state.updatedAt = updatedAt || state.updatedAt;
+
+    if (!locked) {
+      closeRemoteScreen();
+      return;
+    }
+
+    showRemoteScreen();
+  }
+
   function showLocal(message) {
     state.localHidden = false;
     state.popupVisible = true;
@@ -341,6 +389,29 @@
     });
   }
 
+  function showRemoteScreen() {
+    state.screenLocalHidden = false;
+
+    whenReady(function () {
+      injectStyles();
+      createScreenDom();
+      showScreenDom();
+    });
+  }
+
+  function closeRemoteScreen() {
+    whenReady(function () {
+      injectStyles();
+      createScreenDom();
+      hideScreenDom(false);
+    });
+  }
+
+  function closeScreenAndReturnToGame() {
+    state.screenLocalHidden = true;
+    hideScreenDom(true);
+  }
+
   function getVideoStatus() {
     return {
       videoVisible: state.videoVisible,
@@ -349,6 +420,14 @@
       videoStatus: state.videoStatus,
       videoMuted: state.videoMuted,
       videoError: state.videoError,
+    };
+  }
+
+  function getScreenStatus() {
+    return {
+      screenLocked: state.screenLocked,
+      screenStatus: state.screenStatus,
+      screenLocalHidden: state.screenLocalHidden,
     };
   }
 
@@ -369,6 +448,9 @@
       videoStatus: state.videoStatus,
       videoMuted: state.videoMuted,
       videoError: state.videoError,
+      screenLocked: state.screenLocked,
+      screenStatus: state.screenStatus,
+      screenLocalHidden: state.screenLocalHidden,
       updatedAt: state.updatedAt,
       localHidden: state.localHidden,
       reconnectAttempt: state.reconnectAttempt,
@@ -471,6 +553,8 @@
     videoOverlay.style.setProperty("--shipexplorer-video-fade-ms", options.videoFadeMs + "ms");
 
     videoElement = createVideoElement();
+    standbyVideoElement = createVideoElement();
+    standbyVideoElement.setAttribute("aria-hidden", "true");
     videoStatusNode = document.createElement("div");
     videoStatusNode.className = "shipexplorer-video-status";
     videoStatusNode.hidden = true;
@@ -484,6 +568,7 @@
     videoCloseButton.addEventListener("click", closeRemoteVideo);
 
     videoOverlay.appendChild(videoElement);
+    videoOverlay.appendChild(standbyVideoElement);
     videoOverlay.appendChild(videoStatusNode);
     videoOverlay.appendChild(videoCloseButton);
     document.body.appendChild(videoOverlay);
@@ -542,16 +627,77 @@
     overlay.hidden = true;
   }
 
+  function createScreenDom() {
+    if (screenOverlay || !document.body) return;
+
+    screenOverlay = document.createElement("div");
+    screenOverlay.className = "shipexplorer-screen-overlay";
+    screenOverlay.setAttribute("aria-hidden", "true");
+    screenOverlay.hidden = true;
+    screenOverlay.style.zIndex = String(options.screenZIndex);
+    screenOverlay.style.background = options.screenBackground;
+
+    screenCloseButton = document.createElement("button");
+    screenCloseButton.className = "shipexplorer-screen-close";
+    screenCloseButton.type = "button";
+    screenCloseButton.textContent = "VOLVER AL JUEGO";
+    screenCloseButton.hidden = true;
+    screenCloseButton.style.zIndex = String(options.screenCloseZIndex);
+    screenCloseButton.addEventListener("click", closeScreenAndReturnToGame);
+
+    document.addEventListener("keydown", function (event) {
+      if (event.key !== "Escape" || !screenOverlay || screenOverlay.hidden) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      closeScreenAndReturnToGame();
+    });
+
+    document.body.appendChild(screenOverlay);
+    document.body.appendChild(screenCloseButton);
+  }
+
+  function showScreenDom() {
+    if (!screenOverlay || !screenCloseButton) return;
+
+    state.screenLocked = true;
+    state.screenStatus = "locked";
+    screenOverlay.hidden = false;
+    screenOverlay.setAttribute("aria-hidden", "false");
+    screenOverlay.style.zIndex = String(options.screenZIndex);
+    screenOverlay.style.background = options.screenBackground;
+    screenCloseButton.hidden = false;
+    screenCloseButton.style.zIndex = String(options.screenCloseZIndex);
+  }
+
+  function hideScreenDom(closeVideo) {
+    if (!screenOverlay || !screenCloseButton) return;
+
+    screenOverlay.hidden = true;
+    screenOverlay.setAttribute("aria-hidden", "true");
+    screenCloseButton.hidden = true;
+    state.screenLocked = false;
+    state.screenStatus = "hidden";
+
+    if (closeVideo && videoOverlay) {
+      closeVideoDom();
+    }
+  }
+
   function transitionToRemoteVideo(videoId, videoUrl) {
     if (!videoOverlay || !videoElement) return;
 
     var requestId = ++videoRequestId;
     var resolvedVideoUrl = resolveVideoUrl(videoUrl);
-    var hasVisibleVideo = videoElement.classList.contains("shipexplorer-video-element-visible");
+    var hasVisibleVideo = hasVisibleVideoNode();
+    var targetVideoElement = hasVisibleVideo && standbyVideoElement ? standbyVideoElement : videoElement;
 
     clearVideoTimers();
     hideVideoError();
-    prepareVideoOverlay();
+    if (hasVisibleVideo) {
+      prepareVideoOverlay();
+    } else {
+      videoOverlay.hidden = true;
+    }
 
     state.videoVisible = true;
     state.videoId = videoId;
@@ -559,22 +705,12 @@
     state.videoError = "";
     state.videoStatus = hasVisibleVideo ? "transitioning" : "loading";
 
-    if (hasVisibleVideo) {
-      videoElement.classList.remove("shipexplorer-video-element-visible");
-      videoTransitionTimer = window.setTimeout(function () {
-        if (requestId === videoRequestId) {
-          loadRemoteVideoSource(requestId, videoId, videoUrl, resolvedVideoUrl);
-        }
-      }, options.videoFadeMs);
-      return;
-    }
-
-    videoElement.classList.remove("shipexplorer-video-element-visible");
-    loadRemoteVideoSource(requestId, videoId, videoUrl, resolvedVideoUrl);
+    targetVideoElement.classList.remove("shipexplorer-video-element-visible");
+    loadRemoteVideoSource(requestId, videoId, videoUrl, resolvedVideoUrl, targetVideoElement);
   }
 
-  function loadRemoteVideoSource(requestId, videoId, originalVideoUrl, resolvedVideoUrl) {
-    if (!videoElement || requestId !== videoRequestId) return;
+  function loadRemoteVideoSource(requestId, videoId, originalVideoUrl, resolvedVideoUrl, targetVideoElement) {
+    if (!targetVideoElement || requestId !== videoRequestId) return;
 
     state.videoStatus = "loading";
     state.videoId = videoId;
@@ -582,47 +718,70 @@
     state.videoError = "";
 
     try {
-      videoElement.pause();
-      videoElement.loop = options.videoLoop;
-      videoElement.muted = shouldStartVideoMuted();
-      if (videoElement.muted) {
-        videoElement.setAttribute("muted", "");
+      targetVideoElement.pause();
+      targetVideoElement.loop = options.videoLoop;
+      targetVideoElement.muted = shouldStartVideoMuted();
+      if (targetVideoElement.muted) {
+        targetVideoElement.setAttribute("muted", "");
       } else {
-        videoElement.removeAttribute("muted");
+        targetVideoElement.removeAttribute("muted");
       }
-      state.videoMuted = videoElement.muted;
-      videoElement.src = resolvedVideoUrl;
-      videoElement.load();
+      state.videoMuted = targetVideoElement.muted;
+      targetVideoElement.src = resolvedVideoUrl;
+      targetVideoElement.load();
     } catch {
-      showVideoError(videoId, originalVideoUrl);
+      showVideoError(videoId, originalVideoUrl, targetVideoElement);
       return;
     }
 
-    waitForVideoReady(videoElement, function (ready) {
+    waitForVideoReady(targetVideoElement, function (ready) {
       if (requestId !== videoRequestId) return;
 
       if (!ready) {
-        showVideoError(videoId, originalVideoUrl);
+        showVideoError(videoId, originalVideoUrl, targetVideoElement);
         return;
       }
 
-      activateLoadedVideo(requestId);
+      activateLoadedVideo(requestId, targetVideoElement);
     });
   }
 
-  function activateLoadedVideo(requestId) {
-    if (!videoElement || requestId !== videoRequestId) return;
+  function activateLoadedVideo(requestId, loadedVideoElement) {
+    if (!loadedVideoElement || requestId !== videoRequestId) return;
 
+    var previousVideoElement = videoElement && videoElement !== loadedVideoElement ? videoElement : null;
+
+    if (previousVideoElement) prepareVideoOverlay();
     state.videoVisible = true;
     state.videoStatus = "playing";
     state.videoError = "";
     hideVideoError();
-    playVideoNode(videoElement);
+    playVideoNode(loadedVideoElement);
 
-    window.requestAnimationFrame(function () {
-      if (requestId !== videoRequestId) return;
-      videoElement.classList.add("shipexplorer-video-element-visible");
-    });
+    loadedVideoElement.style.zIndex = "2";
+    loadedVideoElement.removeAttribute("aria-hidden");
+    loadedVideoElement.classList.add("shipexplorer-video-element-visible");
+    if (!previousVideoElement) prepareVideoOverlay();
+
+    if (previousVideoElement) {
+      previousVideoElement.style.zIndex = "1";
+      previousVideoElement.setAttribute("aria-hidden", "true");
+      try {
+        previousVideoElement.pause();
+      } catch {
+        // Keep the current frame visible while the new video fades in.
+      }
+
+      videoTransitionTimer = window.setTimeout(function () {
+        if (requestId !== videoRequestId) return;
+        previousVideoElement.classList.remove("shipexplorer-video-element-visible");
+        stopVideoNode(previousVideoElement);
+        videoTransitionTimer = 0;
+      }, options.videoFadeMs);
+    }
+
+    videoElement = loadedVideoElement;
+    if (previousVideoElement) standbyVideoElement = previousVideoElement;
   }
 
   function closeVideoDom() {
@@ -630,6 +789,7 @@
 
     var requestId = ++videoRequestId;
     var wasVisible = !videoOverlay.hidden;
+    var videoNodes = getVideoNodes();
 
     clearVideoTimers();
     hideVideoError();
@@ -640,14 +800,17 @@
     state.videoError = "";
 
     if (!wasVisible) {
-      stopVideoNode(videoElement);
+      stopVideoNodes(videoNodes);
       return;
     }
 
-    videoElement.classList.remove("shipexplorer-video-element-visible");
+    videoNodes.forEach(function (node) {
+      node.classList.remove("shipexplorer-video-element-visible");
+      node.setAttribute("aria-hidden", "true");
+    });
     videoHideTimer = window.setTimeout(function () {
       if (requestId !== videoRequestId) return;
-      stopVideoNode(videoElement);
+      stopVideoNodes(videoNodes);
       videoOverlay.hidden = true;
       state.videoStatus = "hidden";
       videoHideTimer = 0;
@@ -663,14 +826,18 @@
     videoOverlay.style.setProperty("--shipexplorer-video-fade-ms", options.videoFadeMs + "ms");
   }
 
-  function showVideoError(videoId, videoUrl) {
+  function showVideoError(videoId, videoUrl, failedVideoElement) {
     if (!videoOverlay || !videoElement) return;
 
     videoRequestId += 1;
     clearVideoTimers();
     prepareVideoOverlay();
-    stopVideoNode(videoElement);
-    videoElement.classList.remove("shipexplorer-video-element-visible");
+    if (failedVideoElement) {
+      failedVideoElement.classList.remove("shipexplorer-video-element-visible");
+      stopVideoNode(failedVideoElement);
+    } else {
+      stopVideoNodes(getVideoNodes());
+    }
 
     state.videoVisible = true;
     state.videoId = videoId || "";
@@ -748,6 +915,19 @@
     }
   }
 
+  function getVideoNodes() {
+    var nodes = [];
+    if (videoElement) nodes.push(videoElement);
+    if (standbyVideoElement && standbyVideoElement !== videoElement) nodes.push(standbyVideoElement);
+    return nodes;
+  }
+
+  function hasVisibleVideoNode() {
+    return getVideoNodes().some(function (node) {
+      return node.classList.contains("shipexplorer-video-element-visible");
+    });
+  }
+
   function waitForVideoReady(node, callback) {
     if (!node) {
       callback(false);
@@ -818,6 +998,10 @@
     }
   }
 
+  function stopVideoNodes(nodes) {
+    nodes.forEach(stopVideoNode);
+  }
+
   function applyTheme() {
     if (!overlay) return;
 
@@ -863,6 +1047,11 @@
       ".shipexplorer-popup-variant-warning{--shipexplorer-popup-accent:#ff7a16;}",
       ".shipexplorer-popup-variant-danger{--shipexplorer-popup-accent:#e75a4f;}",
       ".shipexplorer-popup-variant-success{--shipexplorer-popup-accent:#74f28c;}",
+      ".shipexplorer-screen-overlay{position:fixed;inset:0;width:100vw;height:100vh;margin:0;padding:0;background:#000;overflow:hidden;box-sizing:border-box;overscroll-behavior:contain;}",
+      ".shipexplorer-screen-overlay[hidden]{display:none!important;}",
+      ".shipexplorer-screen-close{position:fixed;right:max(14px,env(safe-area-inset-right));bottom:max(14px,env(safe-area-inset-bottom));min-height:36px;border:1px solid rgba(215,227,223,.58);background:rgba(0,0,0,.72);color:#d7e3df;font-family:Consolas,'Courier New',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;padding:8px 10px;cursor:pointer;box-sizing:border-box;}",
+      ".shipexplorer-screen-close[hidden]{display:none!important;}",
+      ".shipexplorer-screen-close:hover{border-color:#44e0c0;color:#44e0c0;}",
       ".shipexplorer-video-overlay{position:fixed;inset:0;width:100vw;height:100vh;margin:0;padding:0;background:#6EA285;overflow:hidden;z-index:999999;isolation:isolate;box-sizing:border-box;overscroll-behavior:contain;}",
       ".shipexplorer-video-overlay[hidden]{display:none!important;}",
       ".shipexplorer-video-overlay:before{content:'';position:absolute;inset:0;background:#000;z-index:0;}",
@@ -976,6 +1165,10 @@
     playRemoteVideo: playRemoteVideo,
     closeRemoteVideo: closeRemoteVideo,
     getVideoStatus: getVideoStatus,
+    showRemoteScreen: showRemoteScreen,
+    closeRemoteScreen: closeRemoteScreen,
+    closeScreenAndReturnToGame: closeScreenAndReturnToGame,
+    getScreenStatus: getScreenStatus,
   };
 
   window.ShipExplorerPopupClient = api;

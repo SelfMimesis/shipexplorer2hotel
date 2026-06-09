@@ -235,7 +235,8 @@
       gap: 10px;
     }
 
-    .video-status {
+    .video-status,
+    .screen-status {
       border: 1px solid rgba(31, 125, 114, 0.7);
       background: var(--deep);
       color: var(--amber);
@@ -245,7 +246,8 @@
       text-transform: uppercase;
     }
 
-    .video-status[data-active="true"] {
+    .video-status[data-active="true"],
+    .screen-status[data-active="true"] {
       border-color: var(--cyan);
       color: var(--cyan);
     }
@@ -379,12 +381,28 @@
       </div>
     </section>
 
+    <section class="panel-section" aria-labelledby="screenControlTitle">
+      <div class="section-heading">
+        <h2 id="screenControlTitle">MODO PANTALLA NEGRA</h2>
+        <div id="screenState" class="screen-status" data-active="false">PANTALLA: OFF</div>
+      </div>
+
+      <div class="controls">
+        <button id="screenLockButton" type="button">PANTALLA NEGRA</button>
+        <button id="screenUnlockButton" class="danger" type="button">VOLVER AL JUEGO</button>
+      </div>
+    </section>
+
     <section id="popupState" class="state">
       <strong>POPUP</strong> estado no recibido.
     </section>
 
     <section id="videoDetailState" class="state">
       <strong>VIDEO</strong> estado no recibido.
+    </section>
+
+    <section id="screenDetailState" class="state">
+      <strong>PANTALLA</strong> estado no recibido.
     </section>
 
     <section class="logs" aria-live="polite">
@@ -422,8 +440,12 @@
     const video2Button = document.querySelector("#video2Button");
     const video3Button = document.querySelector("#video3Button");
     const videoCloseButton = document.querySelector("#videoCloseButton");
+    const screenState = document.querySelector("#screenState");
+    const screenLockButton = document.querySelector("#screenLockButton");
+    const screenUnlockButton = document.querySelector("#screenUnlockButton");
     const popupState = document.querySelector("#popupState");
     const videoDetailState = document.querySelector("#videoDetailState");
+    const screenDetailState = document.querySelector("#screenDetailState");
     const logs = document.querySelector("#logs");
 
     const RENDER_WS_URL = "wss://shipexplorer2.onrender.com/ws";
@@ -437,7 +459,7 @@
     let reconnectAttempt = 0;
     let manualClose = false;
     let currentRemoteState = createEmptyRemoteState();
-    const commandButtons = [showButton, hideButton, testButton, video1Button, video2Button, video3Button, videoCloseButton];
+    const commandButtons = [showButton, hideButton, testButton, video1Button, video2Button, video3Button, videoCloseButton, screenLockButton, screenUnlockButton];
 
     socketUrl.textContent = wsUrl;
     restoreForm();
@@ -514,6 +536,12 @@
         return;
       }
 
+      if (data.type === "screen:update") {
+        applyScreenUpdate(data);
+        renderRemoteState();
+        return;
+      }
+
       if (data.type === "error") {
         const message = data.message || "error del servidor";
         addLog(message.toLowerCase().includes("token") ? "token inválido" : message, "error");
@@ -537,6 +565,10 @@
           url: "",
           updatedAt: ""
         },
+        screen: {
+          locked: false,
+          updatedAt: ""
+        },
         updatedAt: ""
       };
     }
@@ -546,6 +578,7 @@
 
       const popup = nextState.popup && typeof nextState.popup === "object" ? nextState.popup : {};
       const video = nextState.video && typeof nextState.video === "object" ? nextState.video : {};
+      const screen = nextState.screen && typeof nextState.screen === "object" ? nextState.screen : {};
 
       currentRemoteState = {
         popup: {
@@ -562,6 +595,10 @@
           id: typeof video.id === "string" ? video.id : "",
           url: typeof video.url === "string" ? video.url : "",
           updatedAt: typeof video.updatedAt === "string" ? video.updatedAt : ""
+        },
+        screen: {
+          locked: Boolean(screen.locked),
+          updatedAt: typeof screen.updatedAt === "string" ? screen.updatedAt : ""
         },
         updatedAt: typeof nextState.updatedAt === "string" ? nextState.updatedAt : ""
       };
@@ -590,9 +627,18 @@
       currentRemoteState.updatedAt = currentRemoteState.video.updatedAt || currentRemoteState.updatedAt;
     }
 
+    function applyScreenUpdate(data) {
+      currentRemoteState.screen = {
+        locked: Boolean(data.screenLocked),
+        updatedAt: typeof data.updatedAt === "string" ? data.updatedAt : ""
+      };
+      currentRemoteState.updatedAt = currentRemoteState.screen.updatedAt || currentRemoteState.updatedAt;
+    }
+
     function renderRemoteState() {
       renderPopupState(currentRemoteState);
       renderVideoState(currentRemoteState);
+      renderScreenState(currentRemoteState);
     }
 
     function sendCommand(command, successLog) {
@@ -696,6 +742,36 @@
       }, "cerrar video enviado");
     }
 
+    function lockScreen() {
+      const token = tokenInput.value.trim();
+      saveTokenPreference();
+
+      if (!token) {
+        addLog("token requerido", "error");
+        return;
+      }
+
+      sendCommand({
+        type: "screen:lock",
+        token
+      }, "pantalla negra enviada");
+    }
+
+    function unlockScreen() {
+      const token = tokenInput.value.trim();
+      saveTokenPreference();
+
+      if (!token) {
+        addLog("token requerido", "error");
+        return;
+      }
+
+      sendCommand({
+        type: "screen:unlock",
+        token
+      }, "volver al juego enviado");
+    }
+
     function sendTest() {
       const testMessage = "SHIP POPUP TEST " + new Date().toLocaleTimeString();
       messageInput.value = testMessage;
@@ -732,6 +808,17 @@
         "<br><strong>ID</strong> " + escapeHtml(video.id || "") +
         "<br><strong>URL</strong> " + escapeHtml(video.url || "") +
         "<br><strong>ACTUALIZADO</strong> " + escapeHtml(video.updatedAt || "");
+    }
+
+    function renderScreenState(state) {
+      const screen = state.screen || {};
+      const locked = Boolean(screen.locked);
+      screenState.textContent = "PANTALLA: " + (locked ? "NEGRA" : "OFF");
+      screenState.dataset.active = String(locked);
+      screenDetailState.innerHTML =
+        "<strong>BLOQUEADA</strong> " + escapeHtml(locked ? "SI" : "NO") +
+        "<br><strong>VIDEO ENCIMA</strong> " + escapeHtml(state.video && state.video.visible ? "SI" : "NO") +
+        "<br><strong>ACTUALIZADO</strong> " + escapeHtml(screen.updatedAt || "");
     }
 
     function getVideoLabel(state) {
@@ -844,6 +931,8 @@
     video2Button.addEventListener("click", () => playVideo("video2"));
     video3Button.addEventListener("click", () => playVideo("video3"));
     videoCloseButton.addEventListener("click", closeVideo);
+    screenLockButton.addEventListener("click", lockScreen);
+    screenUnlockButton.addEventListener("click", unlockScreen);
 
     window.addEventListener("beforeunload", () => {
       manualClose = true;

@@ -261,6 +261,16 @@ function handleWsMessage(client, data, isBinary) {
     return;
   }
 
+  if (payload.type === "screen:lock") {
+    setScreenState(true);
+    return;
+  }
+
+  if (payload.type === "screen:unlock") {
+    setScreenState(false);
+    return;
+  }
+
   setVideoState(false);
 }
 
@@ -311,6 +321,38 @@ function setVideoState(videoVisible, videoId = "") {
   broadcastVideoUpdate();
 }
 
+function setScreenState(screenLocked) {
+  const locked = Boolean(screenLocked);
+  const updatedAt = new Date().toISOString();
+  const wasVideoVisible = remoteState.video.visible;
+
+  remoteState = {
+    ...remoteState,
+    screen: {
+      locked,
+      updatedAt,
+    },
+    video: locked
+      ? remoteState.video
+      : {
+          visible: false,
+          id: "",
+          url: "",
+          updatedAt: wasVideoVisible ? updatedAt : remoteState.video.updatedAt,
+        },
+    updatedAt,
+  };
+
+  queueSavePopupState().catch((error) => {
+    console.error("ERROR: Unable to persist popup state.", error);
+  });
+  broadcastStateUpdate();
+  broadcastScreenUpdate();
+  if (!locked && wasVideoVisible) {
+    broadcastVideoUpdate();
+  }
+}
+
 function getPublicPopupState() {
   return {
     state: getPublicRemoteState(),
@@ -323,6 +365,7 @@ function getPublicPopupState() {
     videoVisible: remoteState.video.visible,
     videoId: remoteState.video.id,
     videoUrl: remoteState.video.url,
+    screenLocked: remoteState.screen.locked,
     updatedAt: remoteState.updatedAt,
   };
 }
@@ -350,6 +393,10 @@ function createDefaultRemoteState() {
       visible: false,
       id: "",
       url: "",
+      updatedAt: "",
+    },
+    screen: {
+      locked: false,
       updatedAt: "",
     },
     updatedAt: "",
@@ -409,6 +456,12 @@ function normalizePopupState(candidate) {
         url: candidate.videoUrl,
         updatedAt: candidate.updatedAt,
       };
+  const sourceScreen = candidate.screen && typeof candidate.screen === "object" && !Array.isArray(candidate.screen)
+    ? candidate.screen
+    : {
+        locked: candidate.screenLocked,
+        updatedAt: candidate.updatedAt,
+      };
 
   if (typeof sourcePopup.visible !== "boolean") {
     throw new Error("Persisted popup.visible must be a boolean.");
@@ -439,9 +492,11 @@ function normalizePopupState(candidate) {
   }
 
   const videoId = videoVisible ? rawVideoId : "";
+  const screenLocked = typeof sourceScreen.locked === "boolean" ? sourceScreen.locked : false;
   const popupUpdatedAt = typeof sourcePopup.updatedAt === "string" ? sourcePopup.updatedAt : "";
   const videoUpdatedAt = typeof sourceVideo.updatedAt === "string" ? sourceVideo.updatedAt : "";
-  const updatedAt = typeof candidate.updatedAt === "string" ? candidate.updatedAt : popupUpdatedAt || videoUpdatedAt;
+  const screenUpdatedAt = typeof sourceScreen.updatedAt === "string" ? sourceScreen.updatedAt : "";
+  const updatedAt = typeof candidate.updatedAt === "string" ? candidate.updatedAt : popupUpdatedAt || videoUpdatedAt || screenUpdatedAt;
 
   return {
     popup: {
@@ -458,6 +513,10 @@ function normalizePopupState(candidate) {
       id: videoId,
       url: videoId ? VIDEOS[videoId] : "",
       updatedAt: videoUpdatedAt,
+    },
+    screen: {
+      locked: screenLocked,
+      updatedAt: screenUpdatedAt,
     },
     updatedAt,
   };
@@ -519,6 +578,14 @@ function buildVideoUpdate() {
   };
 }
 
+function buildScreenUpdate() {
+  return {
+    type: "screen:update",
+    screenLocked: remoteState.screen.locked,
+    updatedAt: remoteState.screen.updatedAt,
+  };
+}
+
 function buildStateUpdate() {
   return {
     type: "state:update",
@@ -541,6 +608,10 @@ function getPublicRemoteState() {
       url: remoteState.video.url,
       updatedAt: remoteState.video.updatedAt,
     },
+    screen: {
+      locked: remoteState.screen.locked,
+      updatedAt: remoteState.screen.updatedAt,
+    },
     updatedAt: remoteState.updatedAt,
   };
 }
@@ -549,6 +620,7 @@ function sendCurrentState(ws) {
   sendJson(ws, buildStateUpdate());
   sendJson(ws, buildPopupUpdate());
   sendJson(ws, buildVideoUpdate());
+  sendJson(ws, buildScreenUpdate());
 }
 
 function broadcastStateUpdate() {
@@ -575,6 +647,14 @@ function broadcastVideoUpdate() {
   }
 }
 
+function broadcastScreenUpdate() {
+  const message = buildScreenUpdate();
+
+  for (const client of clients) {
+    sendJson(client.ws, message);
+  }
+}
+
 function sendJson(ws, payload) {
   if (ws.readyState !== WebSocket.OPEN) return;
   ws.send(JSON.stringify(payload));
@@ -585,7 +665,7 @@ function sendError(ws, code, message) {
 }
 
 function isAdminCommandType(type) {
-  return type === "popup:show" || type === "popup:hide" || type === "video:play" || type === "video:close";
+  return type === "popup:show" || type === "popup:hide" || type === "video:play" || type === "video:close" || type === "screen:lock" || type === "screen:unlock";
 }
 
 function parsePopupShowPayload(payload) {
