@@ -1,4 +1,4 @@
-import { COLORS, GAME_WIDTH, PLAYFIELD } from "../constants.js";
+import { COLORS, PLAYFIELD } from "../constants.js";
 import { clamp, drawBar, drawPixelLine, drawRing, drawText, lerp, rand, withAlpha } from "../utils.js";
 
 const ASSET_SIZE = 360;
@@ -112,7 +112,7 @@ export class Boss {
     this.hitFlash = 0;
     this.defeated = false;
     this.explosionAge = 0;
-    this.explosionLife = 1.45;
+    this.explosionLife = 0.82;
   }
 
   get active() {
@@ -510,31 +510,33 @@ export class Boss {
     if (progress >= 1) return;
 
     const alpha = 1 - progress;
-    const radius = this.radius * (0.35 + progress * 1.4);
+    const radius = this.radius * (0.22 + progress * 0.92);
+    const coreRadius = Math.max(4, this.coreRadius * alpha);
 
-    drawRing(ctx, this.x, this.y, radius, COLORS.orange, alpha, 3);
-    drawRing(ctx, this.x, this.y, radius * 0.66, COLORS.amber, alpha * 0.72, 2);
-    drawRing(ctx, this.x, this.y, radius * 0.34, COLORS.cyan, alpha * 0.48, 1);
+    drawRing(ctx, this.x, this.y, radius, COLORS.orange, alpha * 0.86, 3);
+    drawRing(ctx, this.x, this.y, radius * 0.62, COLORS.amber, alpha * 0.72, 2);
+    drawRing(ctx, this.x, this.y, radius * 0.32, COLORS.cyan, alpha * 0.36, 1);
 
-    for (let i = 0; i < 18; i += 1) {
-      const angle = (Math.PI * 2 * i) / 18 + progress * 1.6;
-      const inner = 28 + progress * 70;
-      const outer = inner + 52 * alpha;
+    ctx.fillStyle = withAlpha(COLORS.black, 0.92);
+    ctx.beginPath();
+    ctx.arc(Math.round(this.x), Math.round(this.y), Math.round(coreRadius), 0, Math.PI * 2);
+    ctx.fill();
+
+    for (let i = 0; i < 12; i += 1) {
+      const angle = (Math.PI * 2 * i) / 12;
+      const inner = 16 + progress * 34;
+      const outer = 54 + progress * 88;
+      const color = i % 2 === 0 ? COLORS.amber : COLORS.orange;
       drawPixelLine(
         ctx,
         this.x + Math.cos(angle) * inner,
         this.y + Math.sin(angle) * inner,
         this.x + Math.cos(angle) * outer,
         this.y + Math.sin(angle) * outer,
-        i % 3 === 0 ? COLORS.amber : COLORS.orange,
-        alpha,
+        color,
+        alpha * 0.82,
         2
       );
-    }
-
-    if (progress < 0.55) {
-      ctx.fillStyle = withAlpha(COLORS.white, (0.55 - progress) * 0.45);
-      ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
     }
   }
 }

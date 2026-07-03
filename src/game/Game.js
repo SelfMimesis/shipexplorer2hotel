@@ -32,6 +32,7 @@ const TURBO_SPEED_MULTIPLIER = 2.35;
 const TURBO_IMPULSE = 420;
 const DOUBLE_TAP_WINDOW = 0.32;
 const DOUBLE_TAP_DISTANCE = 58;
+const BOSS_VICTORY_DELAY = 0.9;
 
 export class Game {
   constructor(canvas, ctx) {
@@ -105,6 +106,7 @@ export class Game {
     this.bossBubblePenaltyLimit = GAME_RULES.bossBubblePenaltyLimit;
     this.victoryPending = false;
     this.victoryTimer = 0;
+    this.victoryTimeoutId = null;
 
     this.bindInput();
     this.bindMotionPreference();
@@ -348,6 +350,7 @@ export class Game {
     this.bossBubblePenaltyProgress = 0;
     this.victoryPending = false;
     this.victoryTimer = 0;
+    this.clearVictoryTimeout();
     this.activePointers.clear();
     this.pointer.isDown = false;
     this.pointer.justPressed = false;
@@ -385,6 +388,7 @@ export class Game {
   }
 
   toTitle() {
+    this.clearVictoryTimeout();
     this.spawn.reset(this.difficulty);
     this.boss.reset();
     this.particles.reset();
@@ -402,6 +406,7 @@ export class Game {
   }
 
   endRun(reason, victory = false) {
+    this.clearVictoryTimeout();
     this.gameOverReason = reason;
     this.victory = Boolean(victory);
     this.changeState(GAME_STATES.GAME_OVER);
@@ -413,6 +418,24 @@ export class Game {
     this.victoryTimer = 0;
     this.score += 2500;
     this.endRun("HAS GANADO", true);
+  }
+
+  clearVictoryTimeout() {
+    if (this.victoryTimeoutId === null) return;
+    clearTimeout(this.victoryTimeoutId);
+    this.victoryTimeoutId = null;
+  }
+
+  startVictorySequence() {
+    if (this.victory || this.victoryPending) return;
+
+    this.victoryPending = true;
+    this.victoryTimer = BOSS_VICTORY_DELAY;
+    this.bullets = [];
+    this.clearVictoryTimeout();
+    this.victoryTimeoutId = setTimeout(() => {
+      if (this.state === GAME_STATES.PLAYING && this.boss.defeated) this.winRun();
+    }, Math.round((BOSS_VICTORY_DELAY + 0.12) * 1000));
   }
 
   fixedUpdate(dt) {
@@ -465,6 +488,9 @@ export class Game {
     this.timeLeft = Math.max(0, GAME_RULES.duration - this.elapsed);
     this.updateShip(dt);
     this.boss.update(dt, this);
+
+    if (this.boss.defeated) this.startVictorySequence();
+
     this.updateBullets(dt);
     this.spawn.update(dt, this);
     this.resolveBubbleBossBounces();
@@ -474,7 +500,7 @@ export class Game {
 
     if (this.victoryPending) {
       this.victoryTimer = Math.max(0, this.victoryTimer - dt);
-      if (this.boss.explosionComplete || this.victoryTimer <= 0) this.winRun();
+      if (this.victoryTimer <= 0) this.winRun();
     }
     if (this.state === GAME_STATES.PLAYING && this.timeLeft <= 0 && this.boss.active) this.endRun("TIMEOUT");
   }
@@ -635,8 +661,7 @@ export class Game {
     });
 
     if (this.boss.defeated) {
-      this.victoryPending = true;
-      this.victoryTimer = this.boss.explosionLife + 0.18;
+      this.startVictorySequence();
     }
   }
 
