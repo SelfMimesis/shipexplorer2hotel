@@ -2,15 +2,22 @@
 <html lang="es">
   <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="ShipExplorer Hotel">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#000000">
     <title>Ship Explorer Bubble Pop</title>
+    <link rel="manifest" href="./manifest.webmanifest">
+    <link rel="apple-touch-icon" href="./icon-192.png">
     <link rel="stylesheet" href="./styles.css">
   </head>
   <body>
     <button id="fullscreenButton" class="fullscreen-button" type="button" aria-label="Activar pantalla completa">
       FULL
     </button>
-    <main class="shell" aria-label="Ship Explorer Bubble Pop">
+    <main id="game-root" class="shell" aria-label="Ship Explorer Bubble Pop">
       <div class="stage">
         <canvas id="game" width="1400" height="800" aria-label="Arcade canvas"></canvas>
         <p class="calibration">CLICK / TAP TO CALIBRATE</p>
