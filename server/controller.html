@@ -922,11 +922,8 @@
 
     async function toggleFullscreen() {
       try {
-        if (!document.fullscreenElement) {
-          await document.documentElement.requestFullscreen();
-        } else {
-          await document.exitFullscreen();
-        }
+        if (document.fullscreenElement) return;
+        await document.documentElement.requestFullscreen();
       } catch (error) {
         addLog("pantalla completa no disponible", "error");
       } finally {
@@ -937,8 +934,8 @@
     function updateFullscreenToggle() {
       const active = Boolean(document.fullscreenElement);
       murderbotFullscreenToggle.setAttribute("aria-pressed", String(active));
-      murderbotFullscreenToggle.setAttribute("aria-label", active ? "Salir de pantalla completa" : "Activar pantalla completa");
-      murderbotFullscreenToggle.disabled = !document.fullscreenEnabled;
+      murderbotFullscreenToggle.setAttribute("aria-label", active ? "Pantalla completa activa" : "Activar pantalla completa");
+      murderbotFullscreenToggle.disabled = active || !document.fullscreenEnabled;
     }
 
     function addLog(message, kind) {

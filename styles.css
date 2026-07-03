@@ -102,6 +102,13 @@ noscript {
   outline: none;
 }
 
+.fullscreen-button[aria-pressed="true"],
+.fullscreen-button:disabled {
+  border-color: var(--amber);
+  color: var(--amber);
+  cursor: default;
+}
+
 .calibration {
   margin: 0;
   color: rgba(214, 255, 0, 0.62);
