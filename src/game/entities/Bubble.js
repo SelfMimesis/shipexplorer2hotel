@@ -224,7 +224,13 @@ export class Bubble {
     this.drawBody(ctx, x, y, radius, base, accent, palette.dim, time);
     this.drawCardinalMarks(ctx, x, y, radius, accent);
     this.drawSymbol(ctx, x, y, accent);
-    this.drawLifetimeArc(ctx, x, y, radius, danger ? COLORS.red : accent);
+    this.drawLifetimeArc(ctx, x, y, radius, this.getLifetimeColor(danger));
+  }
+
+  getLifetimeColor(danger) {
+    if (danger || this.type === "unstable") return COLORS.red;
+    if (this.type === "bonus") return COLORS.orange;
+    return COLORS.cyan;
   }
 
   drawGlow(ctx, x, y, radius, color, alpha) {

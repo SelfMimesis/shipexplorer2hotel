@@ -1,8 +1,8 @@
 import { COLORS, GAME_HEIGHT, GAME_STATES, GAME_WIDTH, PLAYFIELD } from "../constants.js";
 import { clamp, drawBar, drawPixelLine, drawRect, drawRing, drawText, formatPercent, formatScore, formatTime, lerp, withAlpha } from "../utils.js";
 
-const CONTROL_SIZE = 48;
-const CONTROL_GAP = 8;
+const CONTROL_SIZE = 32;
+const CONTROL_GAP = 6;
 const LOGO_PATH =
   "M570.8,431.1c0,145.2-114.5,279.3-281.3,278.7-160.1-.6-277.7-130.2-277.4-279.4.3-150.5,119.9-277.6,277.4-278.5,161.7-.9,281.4,129.3,281.3,279.2ZM288.5,207.6c0-.2.2-.7.2-1.3,0-15.2,0-30.4.1-45.6,0-3.1-1.6-3.5-4-3.3-10.1.7-20.2,1-30.1,2.3-61.5,7.8-114.7,33.5-157.6,78C28.5,308.9,4.1,394.1,24.5,490.8c24.8,117.7,124.9,203.8,244.5,212.9,6.4.5,12.8,0,19.2,0,.1-.3.4-.5.4-.8,0-17.2,0-34.3.2-51.5,0-2.6-1.4-2.8-3.5-2.9-6.6-.4-13.2-.7-19.8-1.4-3.2-.4-5.1.1-7.1,3-6.1,8.8-16.8,12.4-27.2,9.7-10.1-2.6-17.7-10.9-18.9-21.3-.4-3.6-2-5-5.1-6.3-32.8-13.4-60.7-33.6-83.8-60.4-17.6-20.4-31-43.2-40-68.7-.7-2.1-1.2-4-4.3-4.3-14.5-1.6-24.6-10.8-27.5-24.7-2.7-13,3.4-25.8,16-32.9,2.3-1.3,3-2.7,2.9-5.3-.9-25.8,2.6-51.1,10.7-75.6,1-3,.4-4.5-2.1-6.4-15.7-11.8-20.3-32.9-11.2-50.2,9-17,29.6-25.2,47.9-18.4,4.9,1.8,7.2.6,10.4-3,32.6-36.3,72.9-59.7,120.8-69.2,13.4-2.7,27.1-3.7,41.2-5.5ZM345.7,581.2c-.8-.2-.9-.3-1.1-.2-1,.3-2,.6-3,.9-49.1,15.5-95.4,9.6-138.6-18.5-3.3-2.1-5.4-2.3-8.7-.4-7.6,4.3-17,2.7-23-3.1-6.4-6.2-8.2-15.3-4.1-23.2,1.5-2.9,1.1-4.5-.7-7-36.2-48.6-44-101.6-21.6-157.8,16.7-41.8,47.3-70.5,89.2-87.1,3.5-1.4,5-2.7,4.9-7-.7-25.3,22.6-45,47.4-40.7,18.1,3.2,30.9,16.6,33.8,35.3.3,1.7,1.1,4.3,2.2,4.7,9,2.8,18.1,5.1,27.5,7.7.5-.9,1.1-1.9,1.5-3,6.3-15.3,12.6-30.6,19-45.9,1.4-3.2.6-4.4-2.5-5.6-18.7-7-37.9-11.9-57.9-13.4-60.3-4.7-113.6,12.5-159.5,52-7.9,6.8-15,14.6-22.5,22.1,1.5,1.6,2.3,2.5,3.1,3.4,12.8,13.2,15.3,31.9,6.2,47.9-8.6,15.2-26.2,22.7-43.8,18.4-3.2-.8-4.4-.2-5.4,3-6.6,20.8-9.9,42.2-10.1,64,0,3.2,0,6.5,0,9.6,19.6,1.9,30.4,9.6,33.6,23.7,1.5,6.5,1.1,12.8-1.5,19-3.8,9.3-10.9,14.8-19.9,18.1,9.4,47,81.1,121.2,123.1,127.7,8.1-13.4,17.3-18.7,29.2-16,15.4,3.5,21.4,14.2,21.1,29.5,35.1,4.4,68.8.5,102.1-11.8-6.9-15.9-13.6-31.3-20.1-46.4ZM240.5,290.3c-1.9.7-3.7,1.3-5.5,2-19.2,7.7-36.1,19-50.9,33.6-53.5,52.8-58.8,140.5-12.1,198.7,1.8,2.2,3.1,3.2,6.3,2.1,14.8-5.2,29.4,7,26.1,22.3-1.2,5.3.9,7.2,4.5,9.4,49.8,30.3,100.9,32.5,153,6.4,11.7-5.9,22.3-13.6,32.1-23.1-13-13.5-25.8-26.7-38.5-39.9-41.6,37.1-101.1,30.9-134-5.4-33.5-36.9-33.8-91-1-127.5,16.1-17.8,36.2-28.5,60.1-30.8,34.2-3.4,62.4,9,84.8,35.1,13.1-13.5,25.9-26.6,39-40.1-22.9-25.7-50.8-41.8-84.3-48.7-5.3,19.5-17.2,31.7-37.3,33.3-20.3,1.6-33.9-8.8-42.3-27.4ZM290.2,519c47.5.4,87.6-38.5,88.1-85.3.5-49.3-38-88.9-86.8-89.3-48.2-.4-87.7,38.5-88,86.7-.3,48.3,38.4,87.5,86.7,88Z";
 const LOGO_SOURCE_Y = 145;
@@ -31,8 +31,8 @@ export class Hud {
   }
 
   getControlButtons() {
-    const x = 1136;
-    const y = 632;
+    const x = 1174;
+    const y = 644;
 
     return [
       { id: "up", label: "^", x: x + CONTROL_SIZE + CONTROL_GAP, y, w: CONTROL_SIZE, h: CONTROL_SIZE, vx: 0, vy: -1 },
@@ -43,7 +43,7 @@ export class Hud {
   }
 
   getFireButton() {
-    return { id: "fire", label: "FIRE", x: 1056, y: 682, w: 64, h: 64 };
+    return { id: "fire", label: "FIRE", x: 1094, y: 668, w: 58, h: 58 };
   }
 
   getDirectionFromPoint(x, y) {
@@ -229,19 +229,19 @@ export class Hud {
     const sys = 0.72 + Math.sin(t * 0.37 + 2.2) * 0.12;
 
     drawRect(ctx, x, y, w, h, COLORS.cyanDim, "rgba(42, 18, 54, 0.58)", 1);
-    drawText(ctx, "STATUS", x + 18, y + 22, COLORS.cyan, 16);
+    drawText(ctx, "STATUS", x + 18, y + 18, COLORS.cyan, 15);
 
-    this.drawMetricBar(ctx, "CTRL", ctrl, x + 18, y + 80);
-    this.drawMetricBar(ctx, "DATA", data, x + 18, y + 158);
-    this.drawMetricBar(ctx, "SYS", sys, x + 18, y + 236);
+    this.drawMetricRow(ctx, "CTRL", ctrl, x + 18, y + 58);
+    this.drawMetricRow(ctx, "DATA", data, x + 18, y + 122);
+    this.drawMetricRow(ctx, "SYS", sys, x + 18, y + 186);
 
-    this.drawBossBubblePenalty(ctx, game, x + 18, y + 304);
+    this.drawBossBubblePenalty(ctx, game, x + 18, y + 264);
 
-    drawText(ctx, "VECTOR", x + 18, y + 358, COLORS.muted, 12);
-    drawText(ctx, `${Math.round(game.ship.vx).toString().padStart(4, "0")}`, x + 18, y + 382, COLORS.white, 16);
-    drawText(ctx, `${Math.round(game.ship.vy).toString().padStart(4, "0")}`, x + 18, y + 410, COLORS.white, 16);
+    drawText(ctx, "VECTOR", x + 18, y + 338, COLORS.muted, 11);
+    drawText(ctx, `${Math.round(game.ship.vx).toString().padStart(4, "0")}`, x + 18, y + 362, COLORS.white, 15);
+    drawText(ctx, `${Math.round(game.ship.vy).toString().padStart(4, "0")}`, x + 18, y + 388, COLORS.white, 15);
 
-    drawText(ctx, "AUTO NAV", x + 18, y + 470, COLORS.amber, 14);
+    drawText(ctx, "AUTO NAV", x + 18, y + 458, COLORS.amber, 13);
   }
 
   drawBossBubblePenalty(ctx, game, x, y) {
@@ -339,6 +339,12 @@ export class Hud {
     drawText(ctx, formatPercent(value), x, y + 46, COLORS.white, 12);
   }
 
+  drawMetricRow(ctx, label, value, x, y) {
+    drawText(ctx, label, x, y, COLORS.muted, 11);
+    drawText(ctx, formatPercent(value), x + 92, y, COLORS.white, 10, "right");
+    drawBar(ctx, x, y + 20, 92, 9, value, value > 0.78 ? COLORS.amber : COLORS.cyan);
+  }
+
   drawBottomPanel(ctx, game) {
     const x = PLAYFIELD.left;
     const y = 640;
@@ -347,20 +353,18 @@ export class Hud {
     const t = game.totalTime;
 
     drawRect(ctx, x, y, w, h, COLORS.cyanDim, "rgba(42, 18, 54, 0.62)", 1);
-    drawText(ctx, "SCORE", x + 22, y + 20, COLORS.muted, 13);
-    drawText(ctx, formatScore(game.score), x + 102, y + 16, COLORS.white, 20);
-    drawText(ctx, "TIME", x + 280, y + 20, COLORS.muted, 13);
-    drawText(ctx, formatTime(game.timeLeft), x + 346, y + 16, COLORS.amber, 20);
-    drawText(ctx, "COMBO", x + 510, y + 20, COLORS.muted, 13);
-    drawText(ctx, String(game.combo).padStart(2, "0"), x + 598, y + 16, COLORS.cyan, 20);
-    drawText(ctx, "ACC", x + 700, y + 20, COLORS.muted, 13);
-    drawText(ctx, formatPercent(game.accuracy), x + 760, y + 16, COLORS.white, 20);
-    drawText(ctx, "MAX", x + 880, y + 20, COLORS.muted, 13);
-    drawText(ctx, String(game.maxCombo).padStart(2, "0"), x + 942, y + 16, COLORS.cyan, 20);
-    drawText(ctx, "BUB", x + 1018, y + 20, COLORS.muted, 13);
-    drawText(ctx, String(game.spawn.bubbles.length).padStart(2, "0"), x + 1078, y + 16, COLORS.white, 20);
+    drawText(ctx, "SCORE", x + 22, y + 18, COLORS.muted, 12);
+    drawText(ctx, formatScore(game.score), x + 100, y + 14, COLORS.white, 19);
+    drawText(ctx, "TIME", x + 258, y + 18, COLORS.muted, 12);
+    drawText(ctx, formatTime(game.timeLeft), x + 320, y + 14, COLORS.amber, 19);
+    drawText(ctx, "COMBO", x + 462, y + 18, COLORS.muted, 12);
+    drawText(ctx, String(game.combo).padStart(2, "0"), x + 548, y + 14, COLORS.cyan, 19);
+    drawText(ctx, "ACC", x + 640, y + 18, COLORS.muted, 12);
+    drawText(ctx, formatPercent(game.accuracy), x + 698, y + 14, COLORS.white, 19);
+    drawText(ctx, "MAX", x + 820, y + 18, COLORS.muted, 12);
+    drawText(ctx, String(game.maxCombo).padStart(2, "0"), x + 878, y + 14, COLORS.cyan, 19);
 
-    for (let i = 0; i < 48; i += 1) {
+    for (let i = 0; i < 38; i += 1) {
       const blockX = x + 22 + i * 16;
       const height = 3 + Math.round((Math.sin(t * 2.4 + i * 0.62) * 0.5 + 0.5) * 14);
       const hot = (i + Math.floor(t * 8)) % 9 === 0;
@@ -369,9 +373,11 @@ export class Hud {
     }
 
     this.drawLives(ctx, game, x + 22, y + 68);
-    this.drawBossStatus(ctx, game, x + 280, y + 70);
-    drawText(ctx, `DIFF ${game.spawn.difficulty}`, x + 870, y + 70, COLORS.muted, 11);
-    drawText(ctx, `LEAK ${String(game.unstableLeaks).padStart(2, "0")}`, x + 1018, y + 70, game.unstableLeaks > 0 ? COLORS.red : COLORS.muted, 11);
+    this.drawBossStatus(ctx, game, x + 250, y + 70);
+    this.drawTurboStatus(ctx, game, x + 520, y + 70);
+    drawText(ctx, `DIFF ${game.spawn.difficulty}`, x + 750, y + 70, COLORS.muted, 11);
+    drawText(ctx, `BUB ${String(game.spawn.bubbles.length).padStart(2, "0")}`, x + 750, y + 90, COLORS.white, 11);
+    drawText(ctx, `LEAK ${String(game.unstableLeaks).padStart(2, "0")}`, x + 850, y + 90, game.unstableLeaks > 0 ? COLORS.red : COLORS.muted, 11);
   }
 
   drawLives(ctx, game, x, y) {
@@ -404,7 +410,19 @@ export class Hud {
     const value = game.boss.maxHp > 0 ? game.boss.hp / game.boss.maxHp : 0;
     drawText(ctx, "CORE", x, y, COLORS.muted, 11);
     drawBar(ctx, x + 60, y + 2, 128, 9, value, value <= 0.25 ? COLORS.orangeHot : COLORS.orange, withAlpha(COLORS.violet, 0.35));
-    drawText(ctx, `${String(game.boss.hp).padStart(2, "0")}/25`, x + 204, y - 2, COLORS.white, 12);
+    drawText(ctx, `${String(game.boss.hp).padStart(2, "0")}/${game.boss.maxHp}`, x + 204, y - 2, COLORS.white, 12);
+  }
+
+  drawTurboStatus(ctx, game, x, y) {
+    const cooldown = game.turboCooldown ?? 0;
+    const active = (game.turboTimer ?? 0) > 0;
+    const ready = cooldown <= 0;
+    const progress = active ? 1 : ready ? 1 : clamp(1 - cooldown / 10, 0, 1);
+    const color = active ? COLORS.amber : ready ? COLORS.orange : COLORS.cyanDim;
+
+    drawText(ctx, "TURBO", x, y, COLORS.muted, 11);
+    drawBar(ctx, x + 72, y + 2, 120, 9, progress, color, withAlpha(COLORS.violet, 0.35));
+    drawText(ctx, active ? "ON" : ready ? "READY" : `${Math.ceil(cooldown)}S`, x + 208, y - 2, color, 12);
   }
 
   drawControlPad(ctx, game) {
@@ -412,11 +430,45 @@ export class Hud {
 
     for (const button of this.getControlButtons()) {
       const isActive = active === button.id;
-      drawRect(ctx, button.x, button.y, button.w, button.h, isActive ? COLORS.orange : COLORS.cyanDim, isActive ? "rgba(255, 138, 0, 0.16)" : "rgba(42, 18, 54, 0.48)", 1);
-      drawText(ctx, button.label, button.x + button.w / 2, button.y + 15, isActive ? COLORS.orange : COLORS.cyan, 18, "center");
+      const color = isActive ? COLORS.orange : COLORS.cyan;
+      drawRect(ctx, button.x, button.y, button.w, button.h, isActive ? COLORS.orange : COLORS.cyanDim, isActive ? "rgba(255, 138, 0, 0.12)" : "rgba(0, 0, 0, 0.32)", 1);
+      this.drawArrowIcon(ctx, button, color, isActive ? 0.95 : 0.72);
     }
 
     this.drawFireButton(ctx, game);
+  }
+
+  drawArrowIcon(ctx, button, color, alpha) {
+    const cx = Math.round(button.x + button.w / 2);
+    const cy = Math.round(button.y + button.h / 2);
+    const size = Math.round(button.w * 0.26);
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+
+    if (button.id === "up") {
+      ctx.moveTo(cx, cy - size);
+      ctx.lineTo(cx - size, cy + size);
+      ctx.lineTo(cx + size, cy + size);
+    } else if (button.id === "down") {
+      ctx.moveTo(cx, cy + size);
+      ctx.lineTo(cx - size, cy - size);
+      ctx.lineTo(cx + size, cy - size);
+    } else if (button.id === "left") {
+      ctx.moveTo(cx - size, cy);
+      ctx.lineTo(cx + size, cy - size);
+      ctx.lineTo(cx + size, cy + size);
+    } else {
+      ctx.moveTo(cx + size, cy);
+      ctx.lineTo(cx - size, cy - size);
+      ctx.lineTo(cx - size, cy + size);
+    }
+
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
   }
 
   drawFireButton(ctx, game) {
@@ -434,7 +486,6 @@ export class Hud {
     drawPixelLine(ctx, centerX + 12, centerY, centerX + 24, centerY, color, ready ? 0.9 : 0.36);
     drawPixelLine(ctx, centerX, centerY - 24, centerX, centerY - 12, color, ready ? 0.9 : 0.36);
     drawPixelLine(ctx, centerX, centerY + 12, centerX, centerY + 24, color, ready ? 0.9 : 0.36);
-    drawText(ctx, "FIRE", centerX, button.y + 51, ready ? COLORS.orange : COLORS.cyanDim, 8, "center");
   }
 
   drawBoot(ctx, game) {
@@ -466,8 +517,9 @@ export class Hud {
 
   drawGameOver(ctx, game) {
     this.drawDim(ctx, 0.58);
-    drawText(ctx, game.victory ? "HAS GANADO" : "GAME OVER", GAME_WIDTH / 2, 300, game.victory ? COLORS.amber : COLORS.red, 46, "center");
-    drawText(ctx, game.gameOverReason, GAME_WIDTH / 2, 360, COLORS.amber, 22, "center");
+    const color = game.victory ? COLORS.amber : COLORS.red;
+    drawText(ctx, game.victory ? "HAS GANADO" : "GAME OVER", GAME_WIDTH / 2, 300, color, 46, "center");
+    drawText(ctx, game.gameOverReason, GAME_WIDTH / 2, 360, color, 22, "center");
     drawText(ctx, `FINAL SCORE ${formatScore(game.score)}`, GAME_WIDTH / 2, 414, COLORS.white, 22, "center");
     drawText(ctx, "CLICK / TAP OR R TO RESTART", GAME_WIDTH / 2, 470, COLORS.cyan, 18, "center");
   }

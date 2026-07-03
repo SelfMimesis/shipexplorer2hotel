@@ -26,6 +26,12 @@ const BULLET_SPEED = 520;
 const BULLET_LIFE = 1.8;
 const BULLET_RADIUS = 5;
 const SHOOT_COOLDOWN = 0.26;
+const TURBO_COOLDOWN = 10;
+const TURBO_DURATION = 0.72;
+const TURBO_SPEED_MULTIPLIER = 2.35;
+const TURBO_IMPULSE = 420;
+const DOUBLE_TAP_WINDOW = 0.32;
+const DOUBLE_TAP_DISTANCE = 58;
 
 export class Game {
   constructor(canvas, ctx) {
@@ -91,6 +97,10 @@ export class Game {
     this.shipInvulnerable = 0;
     this.bullets = [];
     this.shootCooldown = 0;
+    this.turboCooldown = 0;
+    this.turboTimer = 0;
+    this.lastTapTime = -Infinity;
+    this.lastTapPoint = null;
     this.bossBubblePenaltyProgress = 0;
     this.bossBubblePenaltyLimit = GAME_RULES.bossBubblePenaltyLimit;
 
@@ -177,8 +187,14 @@ export class Game {
       if (!this.pointer.isDown) this.pointer.justPressed = true;
       this.pointer.isDown = true;
 
-      if (this.state === GAME_STATES.PLAYING && (this.hud.isPointInFireButton(point.x, point.y) || this.activePointers.size >= 2)) {
-        this.requestShoot();
+      if (this.state === GAME_STATES.PLAYING) {
+        const firePressed = this.hud.isPointInFireButton(point.x, point.y);
+
+        if (firePressed || this.activePointers.size >= 2) {
+          this.requestShoot();
+        } else if (this.activePointers.size === 1 && this.hud.isPointInMainFrame(point.x, point.y)) {
+          this.handleTurboTap(point);
+        }
       }
 
       if (this.canvas.setPointerCapture) {
@@ -231,6 +247,11 @@ export class Game {
       if ((event.key === " " || event.key === "Enter") && this.state === GAME_STATES.PLAYING) {
         event.preventDefault();
         this.requestShoot();
+      }
+
+      if (event.key === "Shift" && this.state === GAME_STATES.PLAYING) {
+        event.preventDefault();
+        this.requestTurbo();
       }
 
       if (event.key === "1") this.setDifficulty("CALM");
@@ -317,6 +338,10 @@ export class Game {
     this.shipInvulnerable = 0;
     this.bullets = [];
     this.shootCooldown = 0;
+    this.turboCooldown = 0;
+    this.turboTimer = 0;
+    this.lastTapTime = -Infinity;
+    this.lastTapPoint = null;
     this.bossBubblePenaltyLimit = GAME_RULES.bossBubblePenaltyLimit;
     this.bossBubblePenaltyProgress = 0;
     this.activePointers.clear();
@@ -396,6 +421,8 @@ export class Game {
     this.floatingText.update(dt);
     this.shakeTimer = Math.max(0, this.shakeTimer - dt);
     this.shootCooldown = Math.max(0, this.shootCooldown - dt);
+    this.turboCooldown = Math.max(0, this.turboCooldown - dt);
+    this.turboTimer = Math.max(0, this.turboTimer - dt);
     this.shipInvulnerable = Math.max(0, this.shipInvulnerable - dt);
 
     if (this.pointer.justPressed && this.handleMenuPointer()) {
@@ -444,6 +471,44 @@ export class Game {
 
   updateGameOver(dt) {
     this.updateShip(dt * 0.45);
+  }
+
+  handleTurboTap(point) {
+    const now = this.totalTime;
+    const last = this.lastTapPoint;
+    const isDoubleTap =
+      last &&
+      now - this.lastTapTime <= DOUBLE_TAP_WINDOW &&
+      Math.hypot(point.x - last.x, point.y - last.y) <= DOUBLE_TAP_DISTANCE;
+
+    this.lastTapTime = now;
+    this.lastTapPoint = point;
+
+    if (isDoubleTap) {
+      this.lastTapTime = -Infinity;
+      this.lastTapPoint = null;
+      this.requestTurbo();
+    }
+  }
+
+  requestTurbo() {
+    if (this.state !== GAME_STATES.PLAYING || this.turboCooldown > 0 || this.turboTimer > 0) return false;
+
+    const direction = this.getShotVector();
+    this.turboTimer = TURBO_DURATION;
+    this.turboCooldown = TURBO_COOLDOWN;
+    this.ship.vx += direction.x * TURBO_IMPULSE;
+    this.ship.vy += direction.y * TURBO_IMPULSE;
+    this.setShipDrift(direction);
+    this.ship.trailTimer = 0;
+
+    const engineX = this.ship.x - direction.x * 38;
+    const engineY = this.ship.y - direction.y * 38;
+    this.particles.emitBurst(engineX, engineY, COLORS.orange, 24, 260);
+    this.particles.emitBurst(engineX, engineY, COLORS.amber, 12, 220);
+    this.shockwaves.add(this.ship.x, this.ship.y, COLORS.orange, 62);
+    this.addShake(0.18);
+    return true;
   }
 
   requestShoot() {
@@ -783,8 +848,9 @@ export class Game {
   updateShip(dt) {
     const direction = this.getDirectionVector();
     const manual = Boolean(this.activeDirection);
-    const targetSpeed = manual ? this.ship.speed * 1.16 : this.ship.speed * 0.96;
-    const ease = 1 - Math.pow(0.0008, dt);
+    const turboing = this.turboTimer > 0;
+    const targetSpeed = (manual ? this.ship.speed * 1.16 : this.ship.speed * 0.96) * (turboing ? TURBO_SPEED_MULTIPLIER : 1);
+    const ease = 1 - Math.pow(turboing ? 0.00002 : 0.0008, dt);
 
     this.ship.prevX = this.ship.x;
     this.ship.prevY = this.ship.y;
@@ -802,12 +868,12 @@ export class Game {
 
     this.ship.trailTimer -= dt;
     if (this.ship.trailTimer <= 0) {
-      this.ship.trail.push({ x: this.ship.x, y: this.ship.y, age: 0 });
-      this.ship.trailTimer = 0.035;
+      this.ship.trail.push({ x: this.ship.x, y: this.ship.y, age: 0, turbo: turboing, angle: this.ship.angle });
+      this.ship.trailTimer = turboing ? 0.012 : 0.035;
     }
 
     for (const point of this.ship.trail) point.age += dt;
-    this.ship.trail = this.ship.trail.filter((point) => point.age < 0.55);
+    this.ship.trail = this.ship.trail.filter((point) => point.age < (point.turbo ? 0.9 : 0.55));
   }
 
   keepShipInBounds() {
@@ -865,8 +931,11 @@ export class Game {
   drawBullets(ctx) {
     for (const bullet of this.bullets) {
       const alpha = clamp(1 - bullet.age / BULLET_LIFE, 0, 1);
+      const start = -Math.PI / 2;
+      const end = start + Math.PI * 2 * alpha;
+
       drawPixelLine(ctx, bullet.prevX, bullet.prevY, bullet.x, bullet.y, COLORS.orange, alpha, 3);
-      drawRing(ctx, bullet.x, bullet.y, BULLET_RADIUS + 5, COLORS.amber, alpha * 0.28, 1);
+      drawRing(ctx, bullet.x, bullet.y, BULLET_RADIUS + 7, COLORS.amber, alpha * 0.72, 2, start, end);
       ctx.fillStyle = withAlpha(COLORS.white, alpha);
       ctx.fillRect(Math.round(bullet.x) - 2, Math.round(bullet.y) - 2, 4, 4);
     }
@@ -877,15 +946,31 @@ export class Game {
     const x = Math.round(lerp(this.ship.prevX, this.ship.x, interpolation));
     const y = Math.round(lerp(this.ship.prevY, this.ship.y, interpolation));
     const shipAlpha = this.shipInvulnerable > 0 && Math.floor(this.totalTime * 18) % 2 === 0 ? 0.48 : 1;
+    const turboing = this.turboTimer > 0;
 
     for (const point of this.ship.trail) {
-      const alpha = 1 - point.age / 0.55;
-      drawRing(ctx, point.x, point.y, 8 + point.age * 44, COLORS.cyan, alpha * 0.16, 1);
-      drawPixelLine(ctx, point.x - 8, point.y, point.x + 8, point.y, COLORS.cyan, alpha * 0.28);
+      const life = point.turbo ? 0.9 : 0.55;
+      const alpha = 1 - point.age / life;
+      const color = point.turbo ? COLORS.orange : COLORS.cyan;
+      const accent = point.turbo ? COLORS.amber : COLORS.cyan;
+      const stretch = point.turbo ? 42 : 8;
+      const angle = point.angle ?? 0;
+
+      drawRing(ctx, point.x, point.y, 8 + point.age * (point.turbo ? 72 : 44), color, alpha * (point.turbo ? 0.28 : 0.16), 1);
+      drawPixelLine(
+        ctx,
+        point.x - Math.cos(angle) * stretch,
+        point.y - Math.sin(angle) * stretch,
+        point.x + Math.cos(angle) * 8,
+        point.y + Math.sin(angle) * 8,
+        accent,
+        alpha * (point.turbo ? 0.55 : 0.28),
+        point.turbo ? 2 : 1
+      );
     }
 
     drawRing(ctx, x, y, 48 + Math.sin(this.ship.pulse * 8) * 4, COLORS.cyan, 0.18, 1);
-    drawRing(ctx, x, y, this.getShipFieldRadius(), COLORS.orange, 0.12, 1);
+    drawRing(ctx, x, y, this.getShipFieldRadius() + (turboing ? 10 : 0), turboing ? COLORS.amber : COLORS.orange, turboing ? 0.22 : 0.12, 1);
 
     if (this.shipInvulnerable > 0) {
       drawRing(ctx, x, y, 58 + Math.sin(this.totalTime * 20) * 4, COLORS.red, 0.24, 1);
@@ -913,8 +998,18 @@ export class Game {
     ctx.fillStyle = COLORS.cyan;
     ctx.fillRect(-18, -21, 10, 6);
     ctx.fillRect(-18, 15, 10, 6);
+    const flamePulse = Math.round(Math.sin(this.ship.pulse * (turboing ? 52 : 30)) * (turboing ? 8 : 4));
+    const flameLength = 13 + flamePulse + (turboing ? 28 : 0);
     ctx.fillStyle = COLORS.orange;
-    ctx.fillRect(-34, -4, 13 + Math.round(Math.sin(this.ship.pulse * 30) * 4), 8);
+    ctx.fillRect(-34 - (turboing ? 10 : 0), -4, flameLength, 8);
+
+    if (turboing) {
+      ctx.fillStyle = COLORS.amber;
+      ctx.fillRect(-58, -2, 22 + Math.round(Math.sin(this.ship.pulse * 64) * 6), 4);
+      ctx.fillStyle = COLORS.red;
+      ctx.fillRect(-48, -7, 18, 3);
+      ctx.fillRect(-48, 4, 18, 3);
+    }
 
     ctx.restore();
 

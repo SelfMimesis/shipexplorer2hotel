@@ -160,6 +160,7 @@ export class Menu {
   drawGameOver(ctx, game) {
     this.drawOverlay(ctx, 0.68);
     const color = game.victory ? COLORS.amber : COLORS.red;
+    const detailColor = game.victory ? COLORS.amber : COLORS.red;
     const title = game.victory ? "HAS GANADO" : "GAME OVER";
     this.drawPanel(ctx, GAME_WIDTH / 2 - 360, 190, 720, 430, color);
 
@@ -169,7 +170,7 @@ export class Menu {
     drawText(ctx, "ACCURACY", GAME_WIDTH / 2 - 210, 362, COLORS.muted, 16);
     drawText(ctx, formatPercent(game.accuracy), GAME_WIDTH / 2 + 210, 358, COLORS.cyan, 24, "right");
     drawText(ctx, "MAX COMBO", GAME_WIDTH / 2 - 210, 408, COLORS.muted, 16);
-    drawText(ctx, String(game.maxCombo).padStart(2, "0"), GAME_WIDTH / 2 + 210, 404, COLORS.amber, 24, "right");
+    drawText(ctx, String(game.maxCombo).padStart(2, "0"), GAME_WIDTH / 2 + 210, 404, detailColor, 24, "right");
     drawText(ctx, "GRADE", GAME_WIDTH / 2 - 210, 454, COLORS.muted, 16);
     drawText(ctx, game.getGrade(), GAME_WIDTH / 2 + 210, 444, COLORS.white, 38, "right");
   }
@@ -193,7 +194,13 @@ export class Menu {
   }
 
   drawPanel(ctx, x, y, w, h, color) {
-    drawRect(ctx, x, y, w, h, color, "rgba(42, 18, 54, 0.6)", 1);
+    const fill = ctx.createLinearGradient(x, y, x, y + h);
+    fill.addColorStop(0, "rgba(255, 255, 255, 0.11)");
+    fill.addColorStop(0.42, withAlpha(color, 0.1));
+    fill.addColorStop(1, "rgba(0, 0, 0, 0.18)");
+
+    drawRect(ctx, x, y, w, h, color, fill, 1);
+    drawRect(ctx, x + 18, y + 18, w - 36, 20, "rgba(255, 255, 255, 0.08)", "rgba(255, 255, 255, 0.045)", 1);
     drawRect(ctx, x + 10, y + 10, w - 20, h - 20, withAlpha(color, 0.6), null, 1);
     drawRect(ctx, x - 8, y - 8, w + 16, h + 16, withAlpha(color, 0.34), null, 1);
   }
