@@ -16,8 +16,12 @@ const MAX_POPUP_DURATION_MS = 2147483647;
 const MAX_WS_PAYLOAD_BYTES = 2048;
 const MAX_WS_FRAME_BYTES = 4096;
 const STATE_PATH = path.join(__dirname, "state.json");
+const SHARED_TABLET_VIDEO_URL = process.env.SHARED_TABLET_VIDEO_URL || process.env.VIDEO_1_URL || "/videos/01_sc9.06_PinLee_Tablet.mp4";
 const VIDEOS = {
-  video1: process.env.VIDEO_1_URL || "/videos/01_sc9.06_PinLee_Tablet.mp4",
+  chapter8Video1: process.env.CHAPTER_8_VIDEO_1_URL || SHARED_TABLET_VIDEO_URL,
+  chapter8Video2: process.env.CHAPTER_8_VIDEO_2_URL || "/videos/02_sc8.22_PinLee_Tablet.mp4",
+  chapter8Video3: process.env.CHAPTER_8_VIDEO_3_URL || "/videos/03_sc8.22_PinLee_Tablet.mp4",
+  video1: SHARED_TABLET_VIDEO_URL,
   video2: process.env.VIDEO_2_URL || "/videos/02_B_sc9.06_PinLee_Tablet.mp4",
   video3: process.env.VIDEO_3_URL || "/videos/03_B_sc9.06_PinLee_Tablet.mp4",
 };
@@ -500,7 +504,7 @@ function normalizePopupState(candidate) {
   const rawVideoId = typeof sourceVideo.id === "string" ? sourceVideo.id : "";
 
   if (videoVisible && !VALID_VIDEO_IDS.has(rawVideoId)) {
-    throw new Error("Persisted video.id must be video1, video2, or video3 when video.visible is true.");
+    throw new Error(`Persisted video.id must be one of: ${[...VALID_VIDEO_IDS].join(", ")} when video.visible is true.`);
   }
 
   const videoId = videoVisible ? rawVideoId : "";

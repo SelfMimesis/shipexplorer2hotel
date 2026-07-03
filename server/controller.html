@@ -223,6 +223,28 @@
       margin-top: 18px;
     }
 
+    .video-chapter {
+      margin-top: 18px;
+    }
+
+    .video-chapter + .video-chapter {
+      margin-top: 22px;
+      padding-top: 18px;
+      border-top: 1px solid rgba(184, 77, 255, 0.34);
+    }
+
+    .video-chapter-title {
+      margin: 0 0 10px;
+      color: var(--amber);
+      font-size: 13px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .video-chapter .controls {
+      margin-top: 0;
+    }
+
     button {
       min-height: 42px;
       border: 1px solid var(--cyan);
@@ -448,10 +470,25 @@
         <div id="videoState" class="video-status" data-active="false">VIDEO: OFF</div>
       </div>
 
+      <div class="video-chapter" aria-labelledby="chapter8VideoTitle">
+        <h3 id="chapter8VideoTitle" class="video-chapter-title">CAPITULO 8</h3>
+        <div class="controls">
+          <button id="chapter8Video1Button" type="button">VIDEO 1</button>
+          <button id="chapter8Video2Button" type="button">VIDEO 2</button>
+          <button id="chapter8Video3Button" type="button">VIDEO 3</button>
+        </div>
+      </div>
+
+      <div class="video-chapter" aria-labelledby="chapter9VideoTitle">
+        <h3 id="chapter9VideoTitle" class="video-chapter-title">CAPITULO 9</h3>
+        <div class="controls">
+          <button id="video1Button" type="button">VIDEO 1</button>
+          <button id="video2Button" type="button">VIDEO 2</button>
+          <button id="video3Button" type="button">VIDEO 3</button>
+        </div>
+      </div>
+
       <div class="controls">
-        <button id="video1Button" type="button">VIDEO 1</button>
-        <button id="video2Button" type="button">VIDEO 2</button>
-        <button id="video3Button" type="button">VIDEO 3</button>
         <button id="videoCloseButton" class="danger" type="button">CERRAR VIDEO</button>
       </div>
     </section>
@@ -512,6 +549,9 @@
     const hideButton = document.querySelector("#hideButton");
     const testButton = document.querySelector("#testButton");
     const videoState = document.querySelector("#videoState");
+    const chapter8Video1Button = document.querySelector("#chapter8Video1Button");
+    const chapter8Video2Button = document.querySelector("#chapter8Video2Button");
+    const chapter8Video3Button = document.querySelector("#chapter8Video3Button");
     const video1Button = document.querySelector("#video1Button");
     const video2Button = document.querySelector("#video2Button");
     const video3Button = document.querySelector("#video3Button");
@@ -535,7 +575,7 @@
     let reconnectAttempt = 0;
     let manualClose = false;
     let currentRemoteState = createEmptyRemoteState();
-    const commandButtons = [showButton, hideButton, testButton, video1Button, video2Button, video3Button, videoCloseButton, screenLockButton, screenUnlockButton];
+    const commandButtons = [showButton, hideButton, testButton, chapter8Video1Button, chapter8Video2Button, chapter8Video3Button, video1Button, video2Button, video3Button, videoCloseButton, screenLockButton, screenUnlockButton];
 
     socketUrl.textContent = wsUrl;
     restoreForm();
@@ -781,9 +821,12 @@
     function playVideo(videoId) {
       const token = tokenInput.value.trim();
       const labels = {
-        video1: "video 1 enviado",
-        video2: "video 2 enviado",
-        video3: "video 3 enviado"
+        chapter8Video1: "capitulo 8 video 1 enviado",
+        chapter8Video2: "capitulo 8 video 2 enviado",
+        chapter8Video3: "capitulo 8 video 3 enviado",
+        video1: "capitulo 9 video 1 enviado",
+        video2: "capitulo 9 video 2 enviado",
+        video3: "capitulo 9 video 3 enviado"
       };
       saveTokenPreference();
 
@@ -901,9 +944,12 @@
     function getVideoLabel(state) {
       const video = state && state.video ? state.video : {};
       if (!video.visible) return "OFF";
-      if (video.id === "video1") return "VIDEO 1";
-      if (video.id === "video2") return "VIDEO 2";
-      if (video.id === "video3") return "VIDEO 3";
+      if (video.id === "chapter8Video1") return "CAPITULO 8 / VIDEO 1";
+      if (video.id === "chapter8Video2") return "CAPITULO 8 / VIDEO 2";
+      if (video.id === "chapter8Video3") return "CAPITULO 8 / VIDEO 3";
+      if (video.id === "video1") return "CAPITULO 9 / VIDEO 1";
+      if (video.id === "video2") return "CAPITULO 9 / VIDEO 2";
+      if (video.id === "video3") return "CAPITULO 9 / VIDEO 3";
       return "OFF";
     }
 
@@ -1024,6 +1070,9 @@
     showButton.addEventListener("click", () => showPopup());
     hideButton.addEventListener("click", hidePopup);
     testButton.addEventListener("click", sendTest);
+    chapter8Video1Button.addEventListener("click", () => playVideo("chapter8Video1"));
+    chapter8Video2Button.addEventListener("click", () => playVideo("chapter8Video2"));
+    chapter8Video3Button.addEventListener("click", () => playVideo("chapter8Video3"));
     video1Button.addEventListener("click", () => playVideo("video1"));
     video2Button.addEventListener("click", () => playVideo("video2"));
     video3Button.addEventListener("click", () => playVideo("video3"));
