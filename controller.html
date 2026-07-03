@@ -1,0 +1,1040 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ShipExplorer Hotel Controller</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #000000;
+      --panel: #061B20;
+      --deep: #01080A;
+      --cyan: #2CF6FF;
+      --teal: #13B8AE;
+      --muted: #7ECBC4;
+      --amber: #FF2F55;
+      --orange: #FF7A1A;
+      --red: #FF2F55;
+      --white: #EAFEFF;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background:
+        linear-gradient(rgba(44, 246, 255, 0.055) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(44, 246, 255, 0.055) 1px, transparent 1px),
+        radial-gradient(circle at 50% 0%, rgba(255, 47, 85, 0.1), transparent 42%),
+        var(--bg);
+      background-size: 28px 28px, 28px 28px, auto;
+      color: var(--white);
+      font-family: Consolas, "Courier New", monospace;
+      padding: 22px;
+    }
+
+    main {
+      width: min(720px, 100%);
+      border: 1px solid var(--teal);
+      background: rgba(6, 27, 32, 0.68);
+      box-shadow: 0 0 0 1px rgba(44, 246, 255, 0.18), 0 18px 90px rgba(0, 0, 0, 0.52);
+      padding: 22px;
+    }
+
+    header {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(19, 184, 174, 0.6);
+      padding-bottom: 16px;
+      margin-bottom: 18px;
+    }
+
+    .controller-brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .controller-logo-toggle {
+      position: relative;
+      flex: 0 0 auto;
+      width: 72px;
+      height: 72px;
+      display: grid;
+      place-items: center;
+      min-height: 72px;
+      padding: 0;
+      border: 1px solid rgba(44, 246, 255, 0.56);
+      background: radial-gradient(circle at 50% 50%, rgba(255, 47, 85, 0.15), rgba(0, 0, 0, 0.92) 64%);
+      color: var(--cyan);
+      box-shadow: 0 0 0 1px rgba(44, 246, 255, 0.16), 0 0 24px rgba(44, 246, 255, 0.18);
+      cursor: pointer;
+      overflow: hidden;
+    }
+
+    .controller-logo-toggle::after {
+      content: "";
+      position: absolute;
+      inset: 6px;
+      border: 1px solid rgba(19, 184, 174, 0.42);
+      pointer-events: none;
+    }
+
+    .controller-logo {
+      width: 58px;
+      height: 58px;
+      object-fit: contain;
+      mix-blend-mode: screen;
+      filter: saturate(1.25) brightness(1.1) drop-shadow(0 0 10px rgba(44, 246, 255, 0.32));
+    }
+
+    .controller-logo-fallback {
+      color: var(--cyan);
+      font-size: 18px;
+      font-weight: 900;
+      line-height: 0.88;
+      letter-spacing: 0.08em;
+      text-align: center;
+      text-shadow: 0 0 12px rgba(44, 246, 255, 0.42);
+    }
+
+    .controller-logo-toggle:hover,
+    .controller-logo-toggle:focus-visible {
+      border-color: var(--amber);
+      color: var(--amber);
+      background: radial-gradient(circle at 50% 50%, rgba(44, 246, 255, 0.12), rgba(0, 0, 0, 0.94) 64%);
+      outline: none;
+      box-shadow: 0 0 0 1px rgba(255, 47, 85, 0.24), 0 0 28px rgba(255, 47, 85, 0.2);
+    }
+
+    .controller-logo-toggle:hover .controller-logo,
+    .controller-logo-toggle:focus-visible .controller-logo {
+      filter: saturate(1.12) brightness(1.1) drop-shadow(0 0 10px rgba(255, 47, 85, 0.34));
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      color: var(--cyan);
+      font-size: 22px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    h2 {
+      margin: 0;
+      color: var(--cyan);
+      font-size: 15px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .badge {
+      min-width: 148px;
+      border: 1px solid var(--teal);
+      background: var(--deep);
+      color: var(--muted);
+      padding: 10px 12px;
+      text-align: center;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+    }
+
+    .badge[data-state="CONECTADO"] {
+      border-color: var(--cyan);
+      color: var(--cyan);
+    }
+
+    .badge[data-state="CONECTANDO"] {
+      border-color: var(--amber);
+      color: var(--amber);
+    }
+
+    .badge[data-state="ERROR"] {
+      border-color: var(--red);
+      color: var(--red);
+    }
+
+    label {
+      display: block;
+      margin: 16px 0 8px;
+      color: var(--cyan);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      border: 1px solid var(--teal);
+      background: var(--deep);
+      color: var(--white);
+      padding: 12px;
+      font: inherit;
+      outline: none;
+      border-radius: 0;
+    }
+
+    textarea {
+      min-height: 112px;
+      resize: vertical;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: var(--cyan);
+      box-shadow: 0 0 0 2px rgba(44, 246, 255, 0.16);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .advanced-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 0.9fr 0.9fr 0.8fr;
+      gap: 16px;
+      margin-top: 4px;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    button {
+      min-height: 42px;
+      border: 1px solid var(--cyan);
+      background: rgba(44, 246, 255, 0.08);
+      color: var(--white);
+      padding: 10px 14px;
+      font: inherit;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+
+    button:hover {
+      border-color: var(--amber);
+      color: var(--amber);
+      background: rgba(255, 47, 85, 0.12);
+    }
+
+    button.danger {
+      border-color: var(--red);
+    }
+
+    button:disabled {
+      border-color: rgba(126, 203, 196, 0.42);
+      background: rgba(126, 203, 196, 0.08);
+      color: rgba(126, 203, 196, 0.58);
+      cursor: not-allowed;
+    }
+
+    button:disabled:hover {
+      border-color: rgba(126, 203, 196, 0.42);
+      background: rgba(126, 203, 196, 0.08);
+      color: rgba(126, 203, 196, 0.58);
+    }
+
+    .option {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .option input {
+      width: auto;
+    }
+
+    .note {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 8px;
+    }
+
+    .panel-section {
+      border-top: 1px solid rgba(19, 184, 174, 0.6);
+      margin-top: 22px;
+      padding-top: 18px;
+    }
+
+    .section-heading {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .video-status,
+    .screen-status {
+      border: 1px solid rgba(19, 184, 174, 0.7);
+      background: var(--deep);
+      color: var(--amber);
+      padding: 9px 12px;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .video-status[data-active="true"],
+    .screen-status[data-active="true"] {
+      border-color: var(--cyan);
+      color: var(--cyan);
+    }
+
+    .state,
+    .logs {
+      border: 1px solid rgba(19, 184, 174, 0.7);
+      background: rgba(6, 27, 32, 0.58);
+      padding: 12px;
+      margin-top: 18px;
+    }
+
+    .state strong,
+    .logs strong {
+      color: var(--cyan);
+      font-weight: normal;
+    }
+
+    .logs {
+      min-height: 126px;
+      max-height: 190px;
+      overflow: auto;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .log-line {
+      padding: 3px 0;
+      border-bottom: 1px solid rgba(19, 184, 174, 0.24);
+    }
+
+    .log-line.error {
+      color: var(--red);
+    }
+
+    .log-line.ok {
+      color: var(--cyan);
+    }
+
+    @media (max-width: 680px) {
+      header,
+      .grid,
+      .advanced-grid {
+        display: block;
+      }
+
+      .controller-brand {
+        margin-bottom: 14px;
+      }
+
+      .badge {
+        margin-top: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div class="controller-brand">
+        <button id="murderbotFullscreenToggle" class="controller-logo-toggle" type="button" aria-label="Activar pantalla completa" aria-pressed="false">
+          <img class="controller-logo" src="assets/murderbot-logo.png" alt="Murderbot" onerror="this.hidden=true;this.nextElementSibling.hidden=false;">
+          <span class="controller-logo-fallback" hidden>MUR<br>DER<br>BOT</span>
+        </button>
+        <div>
+          <h1>ShipExplorer Hotel Control</h1>
+          <p>Panel remoto para la version hotel publicada en GitHub Pages.</p>
+        </div>
+      </div>
+      <div id="connectionState" class="badge" data-state="DESCONECTADO">DESCONECTADO</div>
+    </header>
+
+    <div class="grid">
+      <section>
+        <label for="token">Token secreto</label>
+        <input id="token" type="password" autocomplete="off" placeholder="ADMIN_TOKEN">
+        <label class="option">
+          <input id="rememberToken" type="checkbox">
+          Recordar token en este dispositivo
+        </label>
+        <p class="note">El token se guarda solo en este dispositivo. Si no marcas la opcion, se conserva solo durante esta sesion.</p>
+      </section>
+
+      <section>
+        <label for="message">Mensaje del popup</label>
+        <textarea id="message" maxlength="240" placeholder="Texto visible en ShipExplorer"></textarea>
+        <div class="meta">
+          <span id="counter">0 / 240</span>
+          <span id="socketUrl">WS</span>
+        </div>
+      </section>
+    </div>
+
+    <div class="advanced-grid">
+      <section>
+        <label for="title">Titulo</label>
+        <input id="title" type="text" maxlength="80" placeholder="Aviso">
+      </section>
+
+      <section>
+        <label for="variant">Variante</label>
+        <select id="variant">
+          <option value="info">INFO</option>
+          <option value="warning">WARNING</option>
+          <option value="danger">DANGER</option>
+          <option value="success">SUCCESS</option>
+        </select>
+      </section>
+
+      <section>
+        <label for="durationMs">Duracion ms</label>
+        <input id="durationMs" type="number" min="0" step="100" value="0">
+      </section>
+
+      <section>
+        <label>&nbsp;</label>
+        <label class="option">
+          <input id="dismissible" type="checkbox" checked>
+          Dismissible
+        </label>
+      </section>
+    </div>
+
+    <div class="controls">
+      <button id="showButton" type="button">MOSTRAR POPUP</button>
+      <button id="hideButton" class="danger" type="button">OCULTAR POPUP</button>
+      <button id="testButton" type="button">ENVIAR TEST</button>
+    </div>
+
+    <section class="panel-section" aria-labelledby="videoControlTitle">
+      <div class="section-heading">
+        <h2 id="videoControlTitle">VIDEO CONTROL</h2>
+        <div id="videoState" class="video-status" data-active="false">VIDEO: OFF</div>
+      </div>
+
+      <div class="controls">
+        <button id="video1Button" type="button">VIDEO 1</button>
+        <button id="video2Button" type="button">VIDEO 2</button>
+        <button id="video3Button" type="button">VIDEO 3</button>
+        <button id="videoCloseButton" class="danger" type="button">CERRAR VIDEO</button>
+      </div>
+    </section>
+
+    <section class="panel-section" aria-labelledby="screenControlTitle">
+      <div class="section-heading">
+        <h2 id="screenControlTitle">MODO PANTALLA NEGRA</h2>
+        <div id="screenState" class="screen-status" data-active="false">PANTALLA: OFF</div>
+      </div>
+
+      <div class="controls">
+        <button id="screenLockButton" type="button">PANTALLA NEGRA</button>
+        <button id="screenUnlockButton" class="danger" type="button">VOLVER AL JUEGO</button>
+      </div>
+    </section>
+
+    <section id="popupState" class="state">
+      <strong>POPUP</strong> estado no recibido.
+    </section>
+
+    <section id="videoDetailState" class="state">
+      <strong>VIDEO</strong> estado no recibido.
+    </section>
+
+    <section id="screenDetailState" class="state">
+      <strong>PANTALLA</strong> estado no recibido.
+    </section>
+
+    <section class="logs" aria-live="polite">
+      <strong>LOGS</strong>
+      <div id="logs"></div>
+    </section>
+  </main>
+
+  <script>
+    const STORAGE_KEYS = {
+      token: "shipexplorer.popup.token",
+      rememberToken: "shipexplorer.popup.rememberToken",
+      message: "shipexplorer.popup.lastMessage",
+      title: "shipexplorer.popup.title",
+      variant: "shipexplorer.popup.variant",
+      durationMs: "shipexplorer.popup.durationMs",
+      dismissible: "shipexplorer.popup.dismissible"
+    };
+
+    const connectionState = document.querySelector("#connectionState");
+    const murderbotFullscreenToggle = document.querySelector("#murderbotFullscreenToggle");
+    const tokenInput = document.querySelector("#token");
+    const rememberTokenInput = document.querySelector("#rememberToken");
+    const messageInput = document.querySelector("#message");
+    const titleInput = document.querySelector("#title");
+    const variantInput = document.querySelector("#variant");
+    const durationInput = document.querySelector("#durationMs");
+    const dismissibleInput = document.querySelector("#dismissible");
+    const counter = document.querySelector("#counter");
+    const socketUrl = document.querySelector("#socketUrl");
+    const showButton = document.querySelector("#showButton");
+    const hideButton = document.querySelector("#hideButton");
+    const testButton = document.querySelector("#testButton");
+    const videoState = document.querySelector("#videoState");
+    const video1Button = document.querySelector("#video1Button");
+    const video2Button = document.querySelector("#video2Button");
+    const video3Button = document.querySelector("#video3Button");
+    const videoCloseButton = document.querySelector("#videoCloseButton");
+    const screenState = document.querySelector("#screenState");
+    const screenLockButton = document.querySelector("#screenLockButton");
+    const screenUnlockButton = document.querySelector("#screenUnlockButton");
+    const popupState = document.querySelector("#popupState");
+    const videoDetailState = document.querySelector("#videoDetailState");
+    const screenDetailState = document.querySelector("#screenDetailState");
+    const logs = document.querySelector("#logs");
+
+    const RENDER_WS_URL = "wss://shipexplorer2.onrender.com/ws";
+    const protocol = location.protocol === "https:" ? "wss" : "ws";
+    const sameHostWsUrl = protocol + "://" + location.host + "/ws";
+    const querySocketUrl = new URLSearchParams(location.search).get("socketUrl");
+    const wsUrl = querySocketUrl || (location.hostname.endsWith(".github.io") ? RENDER_WS_URL : sameHostWsUrl);
+
+    let socket = null;
+    let reconnectTimer = 0;
+    let reconnectAttempt = 0;
+    let manualClose = false;
+    let currentRemoteState = createEmptyRemoteState();
+    const commandButtons = [showButton, hideButton, testButton, video1Button, video2Button, video3Button, videoCloseButton, screenLockButton, screenUnlockButton];
+
+    socketUrl.textContent = wsUrl;
+    restoreForm();
+    updateFullscreenToggle();
+    updateCommandButtons();
+    connect();
+
+    function connect() {
+      clearTimeout(reconnectTimer);
+      manualClose = false;
+      setConnectionState("CONECTANDO");
+
+      if (socket && socket.readyState !== WebSocket.CLOSED) {
+        manualClose = true;
+        socket.close();
+        manualClose = false;
+      }
+
+      socket = new WebSocket(wsUrl);
+      updateCommandButtons();
+
+      socket.addEventListener("open", () => {
+        reconnectAttempt = 0;
+        setConnectionState("CONECTADO");
+        addLog("conectado", "ok");
+      });
+
+      socket.addEventListener("close", () => {
+        setConnectionState("DESCONECTADO");
+        if (!manualClose) scheduleReconnect();
+      });
+
+      socket.addEventListener("error", () => {
+        setConnectionState("ERROR");
+        addLog("error de conexión", "error");
+      });
+
+      socket.addEventListener("message", (event) => {
+        handleSocketMessage(event.data);
+      });
+    }
+
+    function scheduleReconnect() {
+      reconnectAttempt += 1;
+      const delay = Math.min(10000, 900 + reconnectAttempt * 700);
+      addLog("reconectando en " + Math.round(delay / 1000) + "s");
+      reconnectTimer = window.setTimeout(connect, delay);
+    }
+
+    function handleSocketMessage(raw) {
+      let data;
+      try {
+        data = JSON.parse(raw);
+      } catch {
+        addLog("mensaje mal formado del servidor", "error");
+        return;
+      }
+
+      if (data.type === "state:update") {
+        applyGroupedState(data.state);
+        renderRemoteState();
+        return;
+      }
+
+      if (data.type === "popup:update") {
+        applyPopupUpdate(data);
+        renderRemoteState();
+        addLog("popup actualizado", "ok");
+        return;
+      }
+
+      if (data.type === "video:update") {
+        applyVideoUpdate(data);
+        renderRemoteState();
+        return;
+      }
+
+      if (data.type === "screen:update") {
+        applyScreenUpdate(data);
+        renderRemoteState();
+        return;
+      }
+
+      if (data.type === "error") {
+        const message = data.message || "error del servidor";
+        addLog(message.toLowerCase().includes("token") ? "token inválido" : message, "error");
+      }
+    }
+
+    function createEmptyRemoteState() {
+      return {
+        popup: {
+          visible: false,
+          message: "",
+          title: "",
+          variant: "info",
+          durationMs: 0,
+          dismissible: true,
+          updatedAt: ""
+        },
+        video: {
+          visible: false,
+          id: "",
+          url: "",
+          updatedAt: ""
+        },
+        screen: {
+          locked: false,
+          updatedAt: ""
+        },
+        updatedAt: ""
+      };
+    }
+
+    function applyGroupedState(nextState) {
+      if (!nextState || typeof nextState !== "object") return;
+
+      const popup = nextState.popup && typeof nextState.popup === "object" ? nextState.popup : {};
+      const video = nextState.video && typeof nextState.video === "object" ? nextState.video : {};
+      const screen = nextState.screen && typeof nextState.screen === "object" ? nextState.screen : {};
+
+      currentRemoteState = {
+        popup: {
+          visible: Boolean(popup.visible),
+          message: typeof popup.message === "string" ? popup.message : "",
+          title: typeof popup.title === "string" ? popup.title : "",
+          variant: typeof popup.variant === "string" ? popup.variant : "info",
+          durationMs: currentRemoteState.popup.durationMs,
+          dismissible: currentRemoteState.popup.dismissible,
+          updatedAt: typeof popup.updatedAt === "string" ? popup.updatedAt : ""
+        },
+        video: {
+          visible: Boolean(video.visible),
+          id: typeof video.id === "string" ? video.id : "",
+          url: typeof video.url === "string" ? video.url : "",
+          updatedAt: typeof video.updatedAt === "string" ? video.updatedAt : ""
+        },
+        screen: {
+          locked: Boolean(screen.locked),
+          updatedAt: typeof screen.updatedAt === "string" ? screen.updatedAt : ""
+        },
+        updatedAt: typeof nextState.updatedAt === "string" ? nextState.updatedAt : ""
+      };
+    }
+
+    function applyPopupUpdate(data) {
+      currentRemoteState.popup = {
+        visible: Boolean(data.popupVisible),
+        message: typeof data.popupMessage === "string" ? data.popupMessage : "",
+        title: typeof data.title === "string" ? data.title : "",
+        variant: typeof data.variant === "string" ? data.variant : "info",
+        durationMs: Number.isInteger(data.durationMs) ? data.durationMs : 0,
+        dismissible: data.dismissible !== false,
+        updatedAt: typeof data.updatedAt === "string" ? data.updatedAt : ""
+      };
+      currentRemoteState.updatedAt = currentRemoteState.popup.updatedAt || currentRemoteState.updatedAt;
+    }
+
+    function applyVideoUpdate(data) {
+      currentRemoteState.video = {
+        visible: Boolean(data.videoVisible),
+        id: typeof data.videoId === "string" ? data.videoId : "",
+        url: typeof data.videoUrl === "string" ? data.videoUrl : "",
+        updatedAt: typeof data.updatedAt === "string" ? data.updatedAt : ""
+      };
+      currentRemoteState.updatedAt = currentRemoteState.video.updatedAt || currentRemoteState.updatedAt;
+    }
+
+    function applyScreenUpdate(data) {
+      currentRemoteState.screen = {
+        locked: Boolean(data.screenLocked),
+        updatedAt: typeof data.updatedAt === "string" ? data.updatedAt : ""
+      };
+      currentRemoteState.updatedAt = currentRemoteState.screen.updatedAt || currentRemoteState.updatedAt;
+    }
+
+    function renderRemoteState() {
+      renderPopupState(currentRemoteState);
+      renderVideoState(currentRemoteState);
+      renderScreenState(currentRemoteState);
+    }
+
+    function sendCommand(command, successLog) {
+      if (!socket || socket.readyState !== WebSocket.OPEN) {
+        addLog("error de conexión", "error");
+        setConnectionState("DESCONECTADO");
+        scheduleReconnect();
+        return;
+      }
+
+      socket.send(JSON.stringify(command));
+      addLog(successLog || "comando enviado", "ok");
+    }
+
+    function showPopup(messageOverride) {
+      const token = tokenInput.value.trim();
+      const message = String(messageOverride || messageInput.value).trim();
+      const title = titleInput.value.trim();
+      const variant = variantInput.value;
+      const durationMs = parseDurationMs(durationInput.value);
+      const dismissible = dismissibleInput.checked;
+
+      saveTokenPreference();
+      saveLastMessage();
+      savePopupOptions();
+
+      if (!token) {
+        addLog("token requerido", "error");
+        return;
+      }
+
+      if (!message) {
+        addLog("mensaje requerido", "error");
+        return;
+      }
+
+      sendCommand({
+        type: "popup:show",
+        token,
+        message,
+        title,
+        variant,
+        durationMs,
+        dismissible
+      });
+    }
+
+    function hidePopup() {
+      const token = tokenInput.value.trim();
+      saveTokenPreference();
+
+      if (!token) {
+        addLog("token requerido", "error");
+        return;
+      }
+
+      sendCommand({
+        type: "popup:hide",
+        token
+      });
+    }
+
+    function playVideo(videoId) {
+      const token = tokenInput.value.trim();
+      const labels = {
+        video1: "video 1 enviado",
+        video2: "video 2 enviado",
+        video3: "video 3 enviado"
+      };
+      saveTokenPreference();
+
+      if (!token) {
+        addLog("token requerido", "error");
+        return;
+      }
+
+      sendCommand({
+        type: "video:play",
+        token,
+        videoId
+      }, labels[videoId] || "video enviado");
+    }
+
+    function closeVideo() {
+      const token = tokenInput.value.trim();
+      saveTokenPreference();
+
+      if (!token) {
+        addLog("token requerido", "error");
+        return;
+      }
+
+      if (currentRemoteState.video.visible && !window.confirm("Hay un video activo. Quieres cerrarlo?")) {
+        addLog("cerrar video cancelado");
+        return;
+      }
+
+      sendCommand({
+        type: "video:close",
+        token
+      }, "cerrar video enviado");
+    }
+
+    function lockScreen() {
+      const token = tokenInput.value.trim();
+      saveTokenPreference();
+
+      if (!token) {
+        addLog("token requerido", "error");
+        return;
+      }
+
+      sendCommand({
+        type: "screen:lock",
+        token
+      }, "pantalla negra enviada");
+    }
+
+    function unlockScreen() {
+      const token = tokenInput.value.trim();
+      saveTokenPreference();
+
+      if (!token) {
+        addLog("token requerido", "error");
+        return;
+      }
+
+      sendCommand({
+        type: "screen:unlock",
+        token
+      }, "volver al juego enviado");
+    }
+
+    function sendTest() {
+      const testMessage = "SHIP POPUP TEST " + new Date().toLocaleTimeString();
+      messageInput.value = testMessage;
+      titleInput.value = "Aviso";
+      variantInput.value = "info";
+      durationInput.value = "5000";
+      dismissibleInput.checked = true;
+      updateCounter();
+      localStorage.setItem(STORAGE_KEYS.message, testMessage);
+      savePopupOptions();
+      showPopup(testMessage);
+    }
+
+    function renderPopupState(state) {
+      const popup = state.popup || {};
+      const visible = Boolean(popup.visible);
+      popupState.innerHTML =
+        "<strong>VISIBLE</strong> " + escapeHtml(visible ? "SI" : "NO") +
+        "<br><strong>TITULO</strong> " + escapeHtml(popup.title || "") +
+        "<br><strong>VARIANTE</strong> " + escapeHtml(popup.variant || "info") +
+        "<br><strong>DURACION</strong> " + escapeHtml(String(popup.durationMs || 0)) +
+        "<br><strong>DISMISSIBLE</strong> " + escapeHtml(popup.dismissible === false ? "NO" : "SI") +
+        "<br><strong>MENSAJE</strong> " + escapeHtml(popup.message || "") +
+        "<br><strong>ACTUALIZADO</strong> " + escapeHtml(popup.updatedAt || "");
+    }
+
+    function renderVideoState(state) {
+      const videoLabel = getVideoLabel(state);
+      videoState.textContent = "VIDEO: " + videoLabel;
+      videoState.dataset.active = String(videoLabel !== "OFF");
+      const video = state.video || {};
+      videoDetailState.innerHTML =
+        "<strong>VISIBLE</strong> " + escapeHtml(video.visible ? "SI" : "NO") +
+        "<br><strong>ID</strong> " + escapeHtml(video.id || "") +
+        "<br><strong>URL</strong> " + escapeHtml(video.url || "") +
+        "<br><strong>ACTUALIZADO</strong> " + escapeHtml(video.updatedAt || "");
+    }
+
+    function renderScreenState(state) {
+      const screen = state.screen || {};
+      const locked = Boolean(screen.locked);
+      screenState.textContent = "PANTALLA: " + (locked ? "NEGRA" : "OFF");
+      screenState.dataset.active = String(locked);
+      screenDetailState.innerHTML =
+        "<strong>BLOQUEADA</strong> " + escapeHtml(locked ? "SI" : "NO") +
+        "<br><strong>VIDEO ENCIMA</strong> " + escapeHtml(state.video && state.video.visible ? "SI" : "NO") +
+        "<br><strong>ACTUALIZADO</strong> " + escapeHtml(screen.updatedAt || "");
+    }
+
+    function getVideoLabel(state) {
+      const video = state && state.video ? state.video : {};
+      if (!video.visible) return "OFF";
+      if (video.id === "video1") return "VIDEO 1";
+      if (video.id === "video2") return "VIDEO 2";
+      if (video.id === "video3") return "VIDEO 3";
+      return "OFF";
+    }
+
+    function setConnectionState(state) {
+      connectionState.textContent = state;
+      connectionState.dataset.state = state;
+      updateCommandButtons();
+    }
+
+    function updateCommandButtons() {
+      const connected = Boolean(socket && socket.readyState === WebSocket.OPEN);
+      commandButtons.forEach((button) => {
+        button.disabled = !connected;
+      });
+    }
+
+    async function toggleFullscreen() {
+      try {
+        if (document.fullscreenElement) return;
+        await document.documentElement.requestFullscreen();
+      } catch (error) {
+        addLog("pantalla completa no disponible", "error");
+      } finally {
+        updateFullscreenToggle();
+      }
+    }
+
+    function updateFullscreenToggle() {
+      const active = Boolean(document.fullscreenElement);
+      murderbotFullscreenToggle.setAttribute("aria-pressed", String(active));
+      murderbotFullscreenToggle.setAttribute("aria-label", active ? "Pantalla completa activa" : "Activar pantalla completa");
+      murderbotFullscreenToggle.disabled = active || !document.fullscreenEnabled;
+    }
+
+    function addLog(message, kind) {
+      const line = document.createElement("div");
+      line.className = "log-line" + (kind ? " " + kind : "");
+      line.textContent = "[" + new Date().toLocaleTimeString() + "] " + message;
+      logs.prepend(line);
+
+      while (logs.children.length > 30) {
+        logs.lastElementChild.remove();
+      }
+    }
+
+    function updateCounter() {
+      counter.textContent = messageInput.value.length + " / 240";
+    }
+
+    function restoreForm() {
+      rememberTokenInput.checked = localStorage.getItem(STORAGE_KEYS.rememberToken) === "true";
+
+      if (rememberTokenInput.checked) {
+        tokenInput.value = localStorage.getItem(STORAGE_KEYS.token) || "";
+      } else {
+        tokenInput.value = sessionStorage.getItem(STORAGE_KEYS.token) || "";
+      }
+
+      messageInput.value = localStorage.getItem(STORAGE_KEYS.message) || "";
+      titleInput.value = localStorage.getItem(STORAGE_KEYS.title) || "";
+      variantInput.value = localStorage.getItem(STORAGE_KEYS.variant) || "info";
+      durationInput.value = localStorage.getItem(STORAGE_KEYS.durationMs) || "0";
+      dismissibleInput.checked = localStorage.getItem(STORAGE_KEYS.dismissible) !== "false";
+      updateCounter();
+    }
+
+    function saveTokenPreference() {
+      if (rememberTokenInput.checked) {
+        localStorage.setItem(STORAGE_KEYS.rememberToken, "true");
+        localStorage.setItem(STORAGE_KEYS.token, tokenInput.value);
+        sessionStorage.removeItem(STORAGE_KEYS.token);
+      } else {
+        localStorage.setItem(STORAGE_KEYS.rememberToken, "false");
+        localStorage.removeItem(STORAGE_KEYS.token);
+        sessionStorage.setItem(STORAGE_KEYS.token, tokenInput.value);
+      }
+    }
+
+    function saveLastMessage() {
+      localStorage.setItem(STORAGE_KEYS.message, messageInput.value);
+    }
+
+    function savePopupOptions() {
+      localStorage.setItem(STORAGE_KEYS.title, titleInput.value);
+      localStorage.setItem(STORAGE_KEYS.variant, variantInput.value);
+      localStorage.setItem(STORAGE_KEYS.durationMs, String(parseDurationMs(durationInput.value)));
+      localStorage.setItem(STORAGE_KEYS.dismissible, String(dismissibleInput.checked));
+    }
+
+    function parseDurationMs(value) {
+      const parsed = Number.parseInt(value, 10);
+      if (!Number.isFinite(parsed) || parsed < 0) return 0;
+      return Math.min(parsed, 2147483647);
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    rememberTokenInput.addEventListener("change", saveTokenPreference);
+    tokenInput.addEventListener("input", saveTokenPreference);
+    messageInput.addEventListener("input", () => {
+      updateCounter();
+      saveLastMessage();
+    });
+    titleInput.addEventListener("input", savePopupOptions);
+    variantInput.addEventListener("change", savePopupOptions);
+    durationInput.addEventListener("input", savePopupOptions);
+    dismissibleInput.addEventListener("change", savePopupOptions);
+
+    murderbotFullscreenToggle.addEventListener("click", toggleFullscreen);
+    document.addEventListener("fullscreenchange", updateFullscreenToggle);
+    showButton.addEventListener("click", () => showPopup());
+    hideButton.addEventListener("click", hidePopup);
+    testButton.addEventListener("click", sendTest);
+    video1Button.addEventListener("click", () => playVideo("video1"));
+    video2Button.addEventListener("click", () => playVideo("video2"));
+    video3Button.addEventListener("click", () => playVideo("video3"));
+    videoCloseButton.addEventListener("click", closeVideo);
+    screenLockButton.addEventListener("click", lockScreen);
+    screenUnlockButton.addEventListener("click", unlockScreen);
+
+    window.addEventListener("beforeunload", () => {
+      manualClose = true;
+      if (socket) socket.close();
+    });
+  </script>
+</body>
+</html>
