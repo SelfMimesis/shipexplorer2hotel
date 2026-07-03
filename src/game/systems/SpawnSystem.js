@@ -4,9 +4,9 @@ import { Bubble } from "../entities/Bubble.js";
 
 export const DIFFICULTIES = {
   CALM: {
-    spawnEvery: 1.35,
-    minSpawnEvery: 0.68,
-    maxBubbles: 8,
+    spawnEvery: 1.5,
+    minSpawnEvery: 0.76,
+    maxBubbles: 7,
     speedScale: 0.68,
     lifetimeScale: 1.35,
     radiusScale: 1.12,
@@ -15,9 +15,9 @@ export const DIFFICULTIES = {
     bonusEvery: 7,
   },
   NORMAL: {
-    spawnEvery: 1,
-    minSpawnEvery: 0.46,
-    maxBubbles: 12,
+    spawnEvery: 1.12,
+    minSpawnEvery: 0.52,
+    maxBubbles: 10,
     speedScale: 1,
     lifetimeScale: 1,
     radiusScale: 1,
@@ -26,9 +26,9 @@ export const DIFFICULTIES = {
     bonusEvery: 6,
   },
   OVERCLOCK: {
-    spawnEvery: 0.72,
-    minSpawnEvery: 0.28,
-    maxBubbles: 18,
+    spawnEvery: 0.84,
+    minSpawnEvery: 0.34,
+    maxBubbles: 15,
     speedScale: 1.28,
     lifetimeScale: 0.78,
     radiusScale: 0.88,
@@ -133,7 +133,7 @@ export class SpawnSystem {
 
   getMaxBubbles(elapsed) {
     const stage = Math.floor(elapsed / 10);
-    return this.preset.maxBubbles + Math.floor(stage / 2);
+    return this.preset.maxBubbles + Math.floor(stage / 3);
   }
 
   getRadius(type, elapsed) {
@@ -161,10 +161,10 @@ export class SpawnSystem {
     return Math.round(BASE_VALUES[type] * this.preset.scoreScale * overclockPotential);
   }
 
-  findAt(x, y) {
+  findAt(x, y, extraRadius = 8) {
     for (let i = this.bubbles.length - 1; i >= 0; i -= 1) {
       const bubble = this.bubbles[i];
-      if (bubble.containsPoint(x, y, 8)) return bubble;
+      if (bubble.containsPoint(x, y, extraRadius)) return bubble;
     }
 
     return null;

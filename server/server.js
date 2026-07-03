@@ -29,6 +29,10 @@ const DEV_ALLOWED_ORIGINS = [
   "http://localhost:5500",
   "http://127.0.0.1:5500",
 ];
+const DEFAULT_ALLOWED_ORIGINS = [
+  "https://selfmimesis.github.io",
+  "https://shipexplorer2.onrender.com",
+];
 const COMMAND_RATE_LIMIT = {
   windowMs: 60 * 1000,
   max: 20,
@@ -43,7 +47,7 @@ if (!ADMIN_TOKEN) {
   console.warn("WARNING: ADMIN_TOKEN is not set. Popup controller commands will be rejected.");
 }
 
-const allowedOrigins = parseAllowedOrigins(process.env.ALLOWED_ORIGINS || "");
+const allowedOrigins = parseAllowedOrigins(process.env.ALLOWED_ORIGINS || DEFAULT_ALLOWED_ORIGINS.join(","));
 const allowedOriginSet = new Set([...allowedOrigins, ...(NODE_ENV === "development" ? DEV_ALLOWED_ORIGINS : [])]);
 let remoteState = createDefaultRemoteState();
 let saveQueue = Promise.resolve();

@@ -96,6 +96,7 @@ export const GAME_RULES = {
   duration: 120,
   lives: 3,
   bubbleLimit: 18,
+  bossBubblePenaltyLimit: 10,
   baseSpawnEvery: 0.92,
   minSpawnEvery: 0.32,
   comboWindow: 1,

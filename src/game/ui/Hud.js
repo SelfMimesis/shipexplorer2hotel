@@ -246,15 +246,17 @@ export class Hud {
 
   drawBossBubblePenalty(ctx, game, x, y) {
     const progress = game.bossBubblePenaltyProgress ?? 0;
-    drawText(ctx, "BOSS BUB", x, y, COLORS.muted, 11);
+    const limit = game.bossBubblePenaltyLimit ?? 10;
+    drawText(ctx, `BOSS BUB ${progress}/${limit}`, x, y, COLORS.muted, 11);
 
-    for (let i = 0; i < 5; i += 1) {
-      const px = x + i * 18;
+    for (let i = 0; i < limit; i += 1) {
+      const px = x + (i % 5) * 18;
+      const py = y + 24 + Math.floor(i / 5) * 18;
       const active = i < progress;
-      drawRing(ctx, px + 6, y + 26, 6, active ? COLORS.heart : COLORS.cyanDim, active ? 0.9 : 0.36, 1);
+      drawRing(ctx, px + 6, py, 6, active ? COLORS.heart : COLORS.cyanDim, active ? 0.9 : 0.36, 1);
       if (active) {
         ctx.fillStyle = withAlpha(COLORS.heart, 0.34);
-        ctx.fillRect(px + 3, y + 23, 6, 6);
+        ctx.fillRect(px + 3, py - 3, 6, 6);
       }
     }
   }
@@ -385,7 +387,7 @@ export class Hud {
     ctx.save();
     ctx.translate(Math.round(x), Math.round(y));
     ctx.fillStyle = active ? COLORS.heart : withAlpha(COLORS.violet, 0.34);
-    ctx.strokeStyle = active ? withAlpha(COLORS.white, 0.45) : withAlpha(COLORS.cyanDim, 0.38);
+    ctx.strokeStyle = active ? withAlpha(COLORS.heart, 0.68) : withAlpha(COLORS.violet, 0.5);
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(0, 8);

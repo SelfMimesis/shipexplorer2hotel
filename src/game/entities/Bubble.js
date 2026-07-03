@@ -7,11 +7,11 @@ const SYMBOLS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const TYPE_CONFIG = {
   normal: {
     color: COLORS.cyan,
-    accent: COLORS.magentaHot,
+    accent: COLORS.amber,
     dim: COLORS.cyanDim,
     variants: [
-      { color: COLORS.cyan, accent: COLORS.magentaHot, dim: COLORS.cyanDim },
-      { color: COLORS.violetBright, accent: COLORS.cyan, dim: COLORS.violet },
+      { color: COLORS.cyan, accent: COLORS.amber, dim: COLORS.cyanDim },
+      { color: COLORS.violetBright, accent: COLORS.amber, dim: COLORS.violet },
       { color: COLORS.teal, accent: COLORS.lime, dim: COLORS.tealDark },
     ],
     value: 100,
@@ -21,12 +21,12 @@ const TYPE_CONFIG = {
   },
   bonus: {
     color: COLORS.orange,
-    accent: COLORS.amber,
+    accent: COLORS.red,
     dim: COLORS.orangeDim,
     variants: [
-      { color: COLORS.orange, accent: COLORS.amber, dim: COLORS.orangeDim },
-      { color: COLORS.orangeHot, accent: COLORS.lime, dim: COLORS.redDim },
-      { color: COLORS.amber, accent: COLORS.orange, dim: COLORS.amberDim },
+      { color: COLORS.orange, accent: COLORS.red, dim: COLORS.orangeDim },
+      { color: COLORS.orangeHot, accent: COLORS.magentaHot, dim: COLORS.redDim },
+      { color: COLORS.orange, accent: COLORS.violetBright, dim: COLORS.orangeDim },
     ],
     value: 250,
     lifetime: [5.8, 8.2],
@@ -35,11 +35,11 @@ const TYPE_CONFIG = {
   },
   unstable: {
     color: COLORS.red,
-    accent: COLORS.orangeHot,
+    accent: COLORS.amber,
     dim: COLORS.redDim,
     variants: [
+      { color: COLORS.red, accent: COLORS.amber, dim: COLORS.redDim },
       { color: COLORS.red, accent: COLORS.orangeHot, dim: COLORS.redDim },
-      { color: COLORS.orangeHot, accent: COLORS.amber, dim: COLORS.orangeDim },
       { color: COLORS.amber, accent: COLORS.red, dim: COLORS.olive },
     ],
     value: 180,
@@ -216,7 +216,7 @@ export class Bubble {
     const y = Math.round(this.y + (this.type === "unstable" ? Math.cos(time * 37 + this.jitterSeed) * 2 : 0));
     const pulse = Math.sin(time * 5 + this.phase);
     const radius = Math.round(this.radius + pulse * 2 + this.hoverAmount * 5);
-    const accent = danger ? COLORS.orangeHot : palette.accent;
+    const accent = danger ? COLORS.red : palette.accent;
     const base = palette.color;
     const hoverAlpha = 0.18 + this.hoverAmount * 0.24;
 

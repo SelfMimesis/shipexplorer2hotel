@@ -19,12 +19,12 @@ const LAYERS = [
   { src: "assets/boss/CorpRim1.svg", speed: 0.08, alpha: 1, offset: 0 },
 ];
 
-const ORBIT_NODES = [
-  { radius: 116, angle: -2.78, size: 17, drift: 0.82 },
-  { radius: 104, angle: -2.08, size: 21, drift: 1.08 },
-  { radius: 76, angle: -1.35, size: 18, drift: -0.92 },
-  { radius: 69, angle: 2.28, size: 12, drift: -1.12 },
-  { radius: 118, angle: 1.58, size: 18, drift: 0.74 },
+const ORBIT_BLUEPRINTS = [
+  { targetRadius: 116, angle: -2.78, size: 17, angularSpeed: 0.74, radialEase: 2.4 },
+  { targetRadius: 104, angle: -2.08, size: 21, angularSpeed: 0.94, radialEase: 2.1 },
+  { targetRadius: 76, angle: -1.35, size: 18, angularSpeed: 1.08, radialEase: 2.8 },
+  { targetRadius: 69, angle: 2.28, size: 12, angularSpeed: 1.22, radialEase: 3 },
+  { targetRadius: 118, angle: 1.58, size: 18, angularSpeed: 0.66, radialEase: 2.2 },
 ];
 
 const hexToRgb = (hex) => {
@@ -84,6 +84,11 @@ export class Boss {
     this.coreRadius = CORE_RADIUS;
     this.rotation = 0;
     this.orbitPhase = 0;
+    this.orbitBubbles = ORBIT_BLUEPRINTS.map((_, index) => {
+      const bubble = this.createOrbitBubble(index);
+      bubble.radius = bubble.targetRadius;
+      return bubble;
+    });
     this.launchTimer = 0.9;
     this.launchIndex = 0;
     this.projectiles = [];
@@ -115,6 +120,7 @@ export class Boss {
     this.x += this.vx * dt;
     this.y += this.vy * dt;
     this.bounceInsideField();
+    this.updateOrbitBubbles(dt);
 
     this.launchTimer -= dt;
     if (this.launchTimer <= 0) {
@@ -194,19 +200,52 @@ export class Boss {
     }
   }
 
-  getOrbitNode(index) {
-    const node = ORBIT_NODES[index % ORBIT_NODES.length];
-    const angle = node.angle + this.orbitPhase * node.drift;
+  createOrbitBubble(index, angleSeed = 0) {
+    const blueprint = ORBIT_BLUEPRINTS[index % ORBIT_BLUEPRINTS.length];
+    const targetRadius = blueprint.targetRadius + rand(-6, 7);
+
     return {
-      ...node,
-      angle,
-      x: this.x + Math.cos(angle) * node.radius,
-      y: this.y + Math.sin(angle) * node.radius,
+      index,
+      targetRadius,
+      radius: this.coreRadius + blueprint.size + rand(10, 22),
+      angle: blueprint.angle + angleSeed + rand(-0.18, 0.18),
+      size: blueprint.size,
+      angularSpeed: blueprint.angularSpeed + rand(-0.08, 0.08),
+      radialEase: blueprint.radialEase,
+      phase: rand(0, Math.PI * 2),
+    };
+  }
+
+  updateOrbitBubbles(dt) {
+    const speedScale = this.reducedMotion ? 0.45 : 1;
+
+    for (const bubble of this.orbitBubbles) {
+      bubble.angle += bubble.angularSpeed * speedScale * dt;
+      bubble.phase += dt * (1.4 + bubble.index * 0.18) * speedScale;
+
+      const ease = 1 - Math.pow(0.015, dt * bubble.radialEase);
+      bubble.radius += (bubble.targetRadius - bubble.radius) * ease;
+    }
+  }
+
+  getOrbitBubblePosition(bubble) {
+    const spiralPulse = Math.sin(this.orbitPhase * 2.1 + bubble.phase) * 3.5;
+    const radius = bubble.radius + spiralPulse;
+
+    return {
+      ...bubble,
+      orbitRadius: radius,
+      x: this.x + Math.cos(bubble.angle) * radius,
+      y: this.y + Math.sin(bubble.angle) * radius,
     };
   }
 
   launchOrbitBubble() {
-    const node = this.getOrbitNode(this.launchIndex);
+    if (!this.orbitBubbles.length) return;
+
+    const orbitIndex = this.launchIndex % this.orbitBubbles.length;
+    const orbitBubble = this.orbitBubbles[orbitIndex];
+    const node = this.getOrbitBubblePosition(orbitBubble);
     this.launchIndex += 1;
 
     const dx = node.x - this.x;
@@ -216,8 +255,8 @@ export class Boss {
     const outwardY = dy / length;
     const tangentX = -outwardY;
     const tangentY = outwardX;
-    const power = rand(68, 92);
-    const tangentPower = rand(-18, 28);
+    const power = rand(72, 98);
+    const tangentPower = node.angularSpeed * node.orbitRadius * 0.34 + rand(10, 26);
 
     this.projectiles.push({
       x: node.x,
@@ -235,6 +274,10 @@ export class Boss {
       escaped: false,
       onExpire: this.onProjectileExpire,
     });
+
+    const replacement = this.createOrbitBubble(orbitIndex);
+    replacement.angle = node.angle + Math.PI * 0.34 + rand(-0.12, 0.12);
+    this.orbitBubbles[orbitIndex] = replacement;
   }
 
   hitCore(x, y, radius = 0) {
@@ -321,19 +364,20 @@ export class Boss {
   }
 
   drawOrbitBubbles(ctx) {
-    for (let i = 0; i < ORBIT_NODES.length; i += 1) {
-      const node = this.getOrbitNode(i);
-      const pulse = Math.sin(this.orbitPhase * 5 + i) * 2;
+    for (let i = 0; i < this.orbitBubbles.length; i += 1) {
+      const node = this.getOrbitBubblePosition(this.orbitBubbles[i]);
+      const pulse = Math.sin(node.phase) * 1.4;
       const radius = node.size + pulse;
-      const color = mixHex(PROJECTILE_START, PROJECTILE_END, 0.22 + i * 0.12);
+      const coreColor = mixHex(PROJECTILE_START, PROJECTILE_END, 0.18 + i * 0.12);
 
-      ctx.fillStyle = withAlpha(COLORS.black, 0.82);
+      ctx.fillStyle = COLORS.black;
       ctx.beginPath();
       ctx.arc(Math.round(node.x), Math.round(node.y), Math.round(radius + 2), 0, Math.PI * 2);
       ctx.fill();
-      drawRing(ctx, node.x, node.y, radius + 5, color, 0.35, 1);
-      drawRing(ctx, node.x, node.y, radius, PROJECTILE_START, 0.9, 2);
-      drawRing(ctx, node.x, node.y, Math.max(4, radius * 0.54), color, 0.62, 1);
+      drawRing(ctx, node.x, node.y, radius + 6, COLORS.amber, 0.22, 1);
+      drawRing(ctx, node.x, node.y, radius, COLORS.amber, 0.96, 2);
+      drawRing(ctx, node.x, node.y, Math.max(4, radius * 0.56), coreColor, 0.72, 1);
+      drawRing(ctx, node.x, node.y, Math.max(3, radius * 0.3), PROJECTILE_START, 0.58, 1);
     }
   }
 
@@ -347,11 +391,13 @@ export class Boss {
       const accent = mixHex(COLORS.magentaHot, COLORS.heart, lifeProgress);
 
       if (simpleAlpha > 0.02) {
-        ctx.fillStyle = withAlpha(color, 0.2 * simpleAlpha);
+        ctx.fillStyle = withAlpha(COLORS.black, 0.96 * simpleAlpha);
         ctx.beginPath();
         ctx.arc(Math.round(projectile.x), Math.round(projectile.y), Math.round(radius), 0, Math.PI * 2);
         ctx.fill();
-        drawRing(ctx, projectile.x, projectile.y, radius, accent, 0.8 * simpleAlpha, 2);
+        drawRing(ctx, projectile.x, projectile.y, radius + 5, COLORS.amber, 0.18 * simpleAlpha, 1);
+        drawRing(ctx, projectile.x, projectile.y, radius, COLORS.amber, 0.92 * simpleAlpha, 2);
+        drawRing(ctx, projectile.x, projectile.y, Math.max(5, radius * 0.56), color, 0.66 * simpleAlpha, 1);
       }
 
       if (bubbleAlpha > 0.02) {

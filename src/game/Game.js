@@ -92,7 +92,7 @@ export class Game {
     this.bullets = [];
     this.shootCooldown = 0;
     this.bossBubblePenaltyProgress = 0;
-    this.bossBubblePenaltyProgress = 0;
+    this.bossBubblePenaltyLimit = GAME_RULES.bossBubblePenaltyLimit;
 
     this.bindInput();
     this.bindMotionPreference();
@@ -317,6 +317,8 @@ export class Game {
     this.shipInvulnerable = 0;
     this.bullets = [];
     this.shootCooldown = 0;
+    this.bossBubblePenaltyLimit = GAME_RULES.bossBubblePenaltyLimit;
+    this.bossBubblePenaltyProgress = 0;
     this.activePointers.clear();
     this.pointer.isDown = false;
     this.pointer.justPressed = false;
@@ -490,6 +492,13 @@ export class Game {
         continue;
       }
 
+      const fieldBubble = this.spawn.findAt(bullet.x, bullet.y, BULLET_RADIUS);
+      if (fieldBubble) {
+        bullet.dead = true;
+        this.popBubble(fieldBubble);
+        continue;
+      }
+
       if (this.boss.hitCore(bullet.x, bullet.y, BULLET_RADIUS)) {
         bullet.dead = true;
         this.handleBossCoreHit(bullet.x, bullet.y);
@@ -523,7 +532,7 @@ export class Game {
     this.bossBubblePenaltyProgress += 1;
     this.floatingText.add("UNPOPPED", projectile.x, projectile.y - 28, COLORS.heart, 14, { life: 0.58, glitch: true });
 
-    if (this.bossBubblePenaltyProgress < 5) return;
+    if (this.bossBubblePenaltyProgress < this.bossBubblePenaltyLimit) return;
 
     this.bossBubblePenaltyProgress = 0;
     this.shipLives = Math.max(0, this.shipLives - 1);

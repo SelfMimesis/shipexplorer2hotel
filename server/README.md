@@ -60,7 +60,7 @@ Token secreto para mandar comandos desde el controller. No se expone nunca desde
 Lista de origenes permitidos separados por coma. Ejemplo:
 
 ```text
-https://selfmimesis.github.io,https://selfmimesis.github.io/shipexplorer,https://shipexplorer2.onrender.com
+https://selfmimesis.github.io,https://selfmimesis.github.io/shipexplorer2hotel,https://shipexplorer2.onrender.com
 ```
 
 El servidor normaliza cada entrada al origen real (`protocolo://host`). En produccion, los requests HTTP con `Origin` y los WebSocket con `Origin` solo se aceptan si estan en esta lista.
@@ -158,6 +158,8 @@ En produccion usa:
 ```text
 wss://shipexplorer2.onrender.com/ws
 ```
+
+La pagina publica de hotel usa `https://selfmimesis.github.io/shipexplorer2hotel/`, pero el navegador envia como origen `https://selfmimesis.github.io`; por eso ese origen es suficiente en `ALLOWED_ORIGINS`.
 
 Los viewers de ShipExplorer se conectan a `/ws` y reciben el estado actual inmediatamente.
 
