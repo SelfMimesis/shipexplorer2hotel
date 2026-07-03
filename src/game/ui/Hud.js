@@ -369,8 +369,10 @@ export class Hud {
 
     const wavePhase = Math.floor(t * 8);
 
-    for (let i = 0; i < 38; i += 1) {
-      const blockX = x + 22 + i * 16;
+    const graphStartX = x + 22;
+    const graphEndX = x + 520 + 72 + 120;
+
+    for (let i = 0, blockX = graphStartX; blockX <= graphEndX - 9; i += 1, blockX += 16) {
       const height = 3 + Math.round((Math.sin(t * 2.4 + i * 0.62) * 0.5 + 0.5) * 14);
       const trailStep = (i + wavePhase) % 9;
       const hot = trailStep === 0;
