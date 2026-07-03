@@ -88,6 +88,12 @@ export class Menu {
     }
 
     if (game.state === GAME_STATES.GAME_OVER) {
+      if (game.victory) {
+        return [
+          this.button("restart", "VOLVER A JUGAR", GAME_WIDTH / 2 - BUTTON_W / 2, 552, (target) => target.restartRun()),
+        ];
+      }
+
       return [
         this.button("restart", "RESTART", GAME_WIDTH / 2 - BUTTON_W - 12, 552, (target) => target.restartRun()),
         this.button("menu", "MENU", GAME_WIDTH / 2 + 12, 552, (target) => target.toTitle()),
@@ -165,6 +171,9 @@ export class Menu {
     this.drawPanel(ctx, GAME_WIDTH / 2 - 360, 190, 720, 430, color);
 
     drawText(ctx, this.text("gameover", title), GAME_WIDTH / 2, 236, color, 42, "center");
+    if (game.victory) {
+      drawText(ctx, this.text("victory-message", "JEFE DERROTADO"), GAME_WIDTH / 2, 274, COLORS.white, 16, "center");
+    }
     drawText(ctx, "FINAL SCORE", GAME_WIDTH / 2 - 210, 316, COLORS.muted, 16);
     drawText(ctx, formatScore(game.score), GAME_WIDTH / 2 + 210, 312, COLORS.white, 24, "right");
     drawText(ctx, "ACCURACY", GAME_WIDTH / 2 - 210, 362, COLORS.muted, 16);

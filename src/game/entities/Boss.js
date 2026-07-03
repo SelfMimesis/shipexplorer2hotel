@@ -130,7 +130,7 @@ export class Boss {
     this.hitFlash = Math.max(0, this.hitFlash - dt);
 
     if (this.defeated) {
-      this.explosionAge += dt;
+      this.explosionAge = Math.min(this.explosionLife, this.explosionAge + dt);
       this.updateProjectiles(dt);
       return;
     }
@@ -507,6 +507,8 @@ export class Boss {
 
   drawExplosion(ctx) {
     const progress = clamp(this.explosionAge / this.explosionLife, 0, 1);
+    if (progress >= 1) return;
+
     const alpha = 1 - progress;
     const radius = this.radius * (0.35 + progress * 1.4);
 

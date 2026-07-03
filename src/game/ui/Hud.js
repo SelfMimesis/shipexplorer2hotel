@@ -367,19 +367,27 @@ export class Hud {
     drawText(ctx, "MAX", x + 750, y + 18, COLORS.muted, 12);
     drawText(ctx, String(game.maxCombo).padStart(2, "0"), x + 808, y + 14, COLORS.cyan, 19);
 
+    const wavePhase = Math.floor(t * 8);
+
     for (let i = 0; i < 38; i += 1) {
       const blockX = x + 22 + i * 16;
       const height = 3 + Math.round((Math.sin(t * 2.4 + i * 0.62) * 0.5 + 0.5) * 14);
-      const hot = (i + Math.floor(t * 8)) % 9 === 0;
-      ctx.fillStyle = hot ? COLORS.amber : withAlpha(COLORS.cyan, 0.42);
+      const trailStep = (i + wavePhase) % 9;
+      const hot = trailStep === 0;
+      const trailAlpha = trailStep > 0 && trailStep <= 3 ? 0.46 - trailStep * 0.1 : 0;
+      if (hot || trailAlpha > 0) {
+        ctx.fillStyle = withAlpha(COLORS.amber, hot ? 0.28 : trailAlpha);
+        ctx.fillRect(blockX - 3, y + 104 - height - 2, 15, height + 4);
+      }
+      ctx.fillStyle = hot ? COLORS.amber : trailAlpha > 0 ? withAlpha(COLORS.amber, trailAlpha) : withAlpha(COLORS.cyan, 0.42);
       ctx.fillRect(blockX, y + 104 - height, 9, height);
     }
 
     this.drawLives(ctx, game, x + 22, y + 68);
-    this.drawBossStatus(ctx, game, x + 250, y + 70);
-    this.drawTurboStatus(ctx, game, x + 520, y + 70);
-    drawText(ctx, "BUB", x + 686, y + 78, COLORS.muted, 10);
-    drawText(ctx, String(game.spawn.bubbles.length).padStart(2, "0"), x + 740, y + 74, COLORS.violetBright, 16, "right");
+    this.drawBossStatus(ctx, game, x + 250, y + 58);
+    this.drawTurboStatus(ctx, game, x + 520, y + 58);
+    drawText(ctx, "BUB", x + 686, y + 66, COLORS.muted, 10);
+    drawText(ctx, String(game.spawn.bubbles.length).padStart(2, "0"), x + 740, y + 62, COLORS.violetBright, 16, "right");
   }
 
   drawLives(ctx, game, x, y) {
