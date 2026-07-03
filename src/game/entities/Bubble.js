@@ -7,12 +7,12 @@ const SYMBOLS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const TYPE_CONFIG = {
   normal: {
     color: COLORS.cyan,
-    accent: COLORS.amber,
+    accent: COLORS.muted,
     dim: COLORS.cyanDim,
     variants: [
-      { color: COLORS.cyan, accent: COLORS.amber, dim: COLORS.cyanDim },
-      { color: COLORS.violetBright, accent: COLORS.amber, dim: COLORS.violet },
-      { color: COLORS.teal, accent: COLORS.lime, dim: COLORS.tealDark },
+      { color: COLORS.cyan, accent: COLORS.muted, dim: COLORS.cyanDim },
+      { color: COLORS.violetBright, accent: COLORS.orange, dim: COLORS.violet },
+      { color: COLORS.teal, accent: COLORS.muted, dim: COLORS.tealDark },
     ],
     value: 100,
     lifetime: [7.5, 10.5],
@@ -35,12 +35,12 @@ const TYPE_CONFIG = {
   },
   unstable: {
     color: COLORS.red,
-    accent: COLORS.amber,
+    accent: COLORS.orangeHot,
     dim: COLORS.redDim,
     variants: [
-      { color: COLORS.red, accent: COLORS.amber, dim: COLORS.redDim },
       { color: COLORS.red, accent: COLORS.orangeHot, dim: COLORS.redDim },
-      { color: COLORS.amber, accent: COLORS.red, dim: COLORS.olive },
+      { color: COLORS.red, accent: COLORS.orangeHot, dim: COLORS.redDim },
+      { color: COLORS.orangeHot, accent: COLORS.red, dim: COLORS.redDim },
     ],
     value: 180,
     lifetime: [4.4, 6.7],

@@ -378,6 +378,7 @@ export class Boss {
       drawRing(ctx, node.x, node.y, radius, COLORS.amber, 0.96, 2);
       drawRing(ctx, node.x, node.y, Math.max(4, radius * 0.56), coreColor, 0.72, 1);
       drawRing(ctx, node.x, node.y, Math.max(3, radius * 0.3), PROJECTILE_START, 0.58, 1);
+      drawText(ctx, "!", node.x, node.y - 10, COLORS.amber, 16, "center");
     }
   }
 
@@ -389,6 +390,8 @@ export class Boss {
       const lifeProgress = clamp(projectile.age / projectile.life, 0, 1);
       const color = mixHex(PROJECTILE_START, PROJECTILE_END, lifeProgress);
       const accent = mixHex(COLORS.magentaHot, COLORS.heart, lifeProgress);
+      const start = -Math.PI / 2;
+      const end = start + Math.PI * 2 * (1 - lifeProgress);
 
       if (simpleAlpha > 0.02) {
         ctx.fillStyle = withAlpha(COLORS.black, 0.96 * simpleAlpha);
@@ -402,19 +405,23 @@ export class Boss {
 
       if (bubbleAlpha > 0.02) {
         const grown = radius + bubbleAlpha * 6;
-        const start = -Math.PI / 2;
-        const end = start + Math.PI * 2 * (1 - lifeProgress);
 
         drawRing(ctx, projectile.x, projectile.y, grown + 13, accent, 0.22 * bubbleAlpha, 1);
         drawRing(ctx, projectile.x, projectile.y, grown, color, 0.86 * bubbleAlpha, 2);
         drawRing(ctx, projectile.x, projectile.y, grown - 9, COLORS.violetBright, 0.5 * bubbleAlpha, 1);
         drawRing(ctx, projectile.x, projectile.y, Math.max(5, grown - 21), accent, 0.42 * bubbleAlpha, 1);
-        drawRing(ctx, projectile.x, projectile.y, grown + 17, accent, 0.78 * bubbleAlpha, 2, start, end);
+        drawRing(ctx, projectile.x, projectile.y, grown + 17, COLORS.amber, 0.78 * bubbleAlpha, 2, start, end);
         drawPixelLine(ctx, projectile.x - grown - 12, projectile.y, projectile.x - grown - 4, projectile.y, accent, 0.72 * bubbleAlpha);
         drawPixelLine(ctx, projectile.x + grown + 4, projectile.y, projectile.x + grown + 12, projectile.y, accent, 0.72 * bubbleAlpha);
         drawPixelLine(ctx, projectile.x, projectile.y - grown - 12, projectile.x, projectile.y - grown - 4, accent, 0.58 * bubbleAlpha);
         drawPixelLine(ctx, projectile.x, projectile.y + grown + 4, projectile.x, projectile.y + grown + 12, accent, 0.58 * bubbleAlpha);
       }
+
+      const timerRadius = radius + 17 + bubbleAlpha * 6;
+      const warningSize = Math.max(15, Math.round(radius * 0.88));
+      drawRing(ctx, projectile.x, projectile.y, timerRadius, COLORS.amber, 0.84, 2, start, end);
+      drawText(ctx, "!", projectile.x + 1, projectile.y - warningSize * 0.54 + 1, COLORS.black, warningSize, "center");
+      drawText(ctx, "!", projectile.x, projectile.y - warningSize * 0.54, COLORS.amber, warningSize, "center");
     }
   }
 
