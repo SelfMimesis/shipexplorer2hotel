@@ -7,17 +7,27 @@ const SYMBOLS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const TYPE_CONFIG = {
   normal: {
     color: COLORS.cyan,
-    accent: COLORS.cyan,
+    accent: COLORS.magentaHot,
     dim: COLORS.cyanDim,
+    variants: [
+      { color: COLORS.cyan, accent: COLORS.magentaHot, dim: COLORS.cyanDim },
+      { color: COLORS.violetBright, accent: COLORS.cyan, dim: COLORS.violet },
+      { color: COLORS.teal, accent: COLORS.lime, dim: COLORS.tealDark },
+    ],
     value: 100,
     lifetime: [7.5, 10.5],
     radius: [28, 44],
     speed: [24, 58],
   },
   bonus: {
-    color: COLORS.cyan,
+    color: COLORS.orange,
     accent: COLORS.amber,
-    dim: COLORS.amberDim,
+    dim: COLORS.orangeDim,
+    variants: [
+      { color: COLORS.orange, accent: COLORS.amber, dim: COLORS.orangeDim },
+      { color: COLORS.orangeHot, accent: COLORS.lime, dim: COLORS.redDim },
+      { color: COLORS.amber, accent: COLORS.orange, dim: COLORS.amberDim },
+    ],
     value: 250,
     lifetime: [5.8, 8.2],
     radius: [24, 38],
@@ -25,8 +35,13 @@ const TYPE_CONFIG = {
   },
   unstable: {
     color: COLORS.red,
-    accent: COLORS.red,
+    accent: COLORS.orangeHot,
     dim: COLORS.redDim,
+    variants: [
+      { color: COLORS.red, accent: COLORS.orangeHot, dim: COLORS.redDim },
+      { color: COLORS.orangeHot, accent: COLORS.amber, dim: COLORS.orangeDim },
+      { color: COLORS.amber, accent: COLORS.red, dim: COLORS.olive },
+    ],
     value: 180,
     lifetime: [4.4, 6.7],
     radius: [22, 34],
@@ -60,6 +75,7 @@ export class Bubble {
     this.lifetime = config.lifetime ?? rand(typeConfig.lifetime[0], typeConfig.lifetime[1]) * Math.max(0.58, 1 - level * 0.12);
     this.type = config.type;
     this.value = config.value ?? typeConfig.value;
+    this.palette = config.palette ?? this.pickPalette(typeConfig);
     this.popped = false;
     this.hoverAmount = 0;
 
@@ -107,6 +123,11 @@ export class Bubble {
       x: configOrType.x ?? x ?? defaultX,
       y: configOrType.y ?? y ?? defaultY,
     };
+  }
+
+  pickPalette(typeConfig) {
+    const variants = typeConfig.variants ?? [typeConfig];
+    return variants[randInt(0, variants.length - 1)];
   }
 
   makeSymbol() {
@@ -188,15 +209,15 @@ export class Bubble {
   draw(ctx, time = this.age) {
     if (this.popped) return;
 
-    const palette = TYPE_CONFIG[this.type];
+    const palette = this.palette ?? TYPE_CONFIG[this.type];
     const danger = this.progress > 0.78;
     const unstableJitter = this.type === "unstable" ? Math.round(Math.sin(time * 48 + this.jitterSeed) * 2) : 0;
     const x = Math.round(this.x + unstableJitter);
     const y = Math.round(this.y + (this.type === "unstable" ? Math.cos(time * 37 + this.jitterSeed) * 2 : 0));
     const pulse = Math.sin(time * 5 + this.phase);
     const radius = Math.round(this.radius + pulse * 2 + this.hoverAmount * 5);
-    const accent = danger ? COLORS.amber : palette.accent;
-    const base = this.type === "normal" ? COLORS.cyan : palette.color;
+    const accent = danger ? COLORS.orangeHot : palette.accent;
+    const base = palette.color;
     const hoverAlpha = 0.18 + this.hoverAmount * 0.24;
 
     this.drawGlow(ctx, x, y, radius, accent, hoverAlpha);
@@ -232,8 +253,8 @@ export class Bubble {
     drawRing(ctx, x, y, radius + 5, base, 0.3, 1, -sweepStart * 0.7, -sweepStart * 0.7 + Math.PI * 0.44);
 
     if (this.type === "unstable") {
-      drawPixelLine(ctx, x - radius + 8, y - radius + 7, x - radius + 24, y - radius + 7, COLORS.red, 0.9, 2);
-      drawPixelLine(ctx, x + radius - 24, y + radius - 7, x + radius - 8, y + radius - 7, COLORS.red, 0.9, 2);
+      drawPixelLine(ctx, x - radius + 8, y - radius + 7, x - radius + 24, y - radius + 7, COLORS.orangeHot, 0.9, 2);
+      drawPixelLine(ctx, x + radius - 24, y + radius - 7, x + radius - 8, y + radius - 7, COLORS.orangeHot, 0.9, 2);
     }
   }
 

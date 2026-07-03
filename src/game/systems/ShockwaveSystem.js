@@ -3,8 +3,8 @@ import { clamp, drawPixelLine, drawRect, drawRing, rand, withAlpha } from "../ut
 
 const TYPE_COLORS = {
   normal: COLORS.cyan,
-  bonus: COLORS.amber,
-  unstable: COLORS.red,
+  bonus: COLORS.orange,
+  unstable: COLORS.orangeHot,
 };
 
 export class ShockwaveSystem {

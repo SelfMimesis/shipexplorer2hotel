@@ -42,8 +42,17 @@ export class Hud {
     ];
   }
 
+  getFireButton() {
+    return { id: "fire", label: "FIRE", x: 1056, y: 682, w: 64, h: 64 };
+  }
+
   getDirectionFromPoint(x, y) {
     return this.getControlButtons().find((button) => x >= button.x && x <= button.x + button.w && y >= button.y && y <= button.y + button.h) ?? null;
+  }
+
+  isPointInFireButton(x, y) {
+    const button = this.getFireButton();
+    return x >= button.x && x <= button.x + button.w && y >= button.y && y <= button.y + button.h;
   }
 
   isPointInMainFrame(x, y) {
@@ -60,7 +69,7 @@ export class Hud {
   }
 
   drawMainFrame(ctx, game) {
-    drawRect(ctx, PLAYFIELD.left, PLAYFIELD.top, PLAYFIELD.right - PLAYFIELD.left, PLAYFIELD.bottom - PLAYFIELD.top, COLORS.cyan, "rgba(24, 27, 28, 0.08)", 1);
+    drawRect(ctx, PLAYFIELD.left, PLAYFIELD.top, PLAYFIELD.right - PLAYFIELD.left, PLAYFIELD.bottom - PLAYFIELD.top, COLORS.cyan, "rgba(103, 64, 128, 0.08)", 1);
     drawRect(ctx, PLAYFIELD.left - 10, PLAYFIELD.top - 10, PLAYFIELD.right - PLAYFIELD.left + 20, PLAYFIELD.bottom - PLAYFIELD.top + 20, COLORS.cyanDim, null, 1, 0.9);
 
     this.drawFrameGlow(ctx);
@@ -113,7 +122,7 @@ export class Hud {
   drawBase(ctx) {
     ctx.fillStyle = COLORS.black;
     ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-    ctx.fillStyle = "rgba(24, 27, 28, 0.5)";
+    ctx.fillStyle = "rgba(20, 5, 29, 0.26)";
     ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
   }
 
@@ -178,7 +187,7 @@ export class Hud {
     for (let i = 0; i < 90; i += 1) {
       const x = (this.noiseSeed * 37 + i * 83) % GAME_WIDTH;
       const y = (this.noiseSeed * 53 + i * 41) % GAME_HEIGHT;
-      ctx.fillStyle = i % 7 === 0 ? "rgba(255, 122, 22, 0.12)" : "rgba(215, 227, 223, 0.08)";
+      ctx.fillStyle = i % 7 === 0 ? "rgba(214, 255, 0, 0.13)" : "rgba(157, 0, 255, 0.1)";
       ctx.fillRect(x, y, 1, 1);
     }
   }
@@ -219,18 +228,35 @@ export class Hud {
     const data = 0.5 + Math.sin(t * 0.53 + 1.4) * 0.22;
     const sys = 0.72 + Math.sin(t * 0.37 + 2.2) * 0.12;
 
-    drawRect(ctx, x, y, w, h, COLORS.cyanDim, "rgba(17, 19, 20, 0.74)", 1);
+    drawRect(ctx, x, y, w, h, COLORS.cyanDim, "rgba(42, 18, 54, 0.58)", 1);
     drawText(ctx, "STATUS", x + 18, y + 22, COLORS.cyan, 16);
 
     this.drawMetricBar(ctx, "CTRL", ctrl, x + 18, y + 80);
     this.drawMetricBar(ctx, "DATA", data, x + 18, y + 158);
     this.drawMetricBar(ctx, "SYS", sys, x + 18, y + 236);
 
-    drawText(ctx, "VECTOR", x + 18, y + 330, COLORS.muted, 12);
-    drawText(ctx, `${Math.round(game.ship.vx).toString().padStart(4, "0")}`, x + 18, y + 354, COLORS.white, 16);
-    drawText(ctx, `${Math.round(game.ship.vy).toString().padStart(4, "0")}`, x + 18, y + 382, COLORS.white, 16);
+    this.drawBossBubblePenalty(ctx, game, x + 18, y + 304);
 
-    drawText(ctx, "AUTO NAV", x + 18, y + 450, COLORS.amber, 14);
+    drawText(ctx, "VECTOR", x + 18, y + 358, COLORS.muted, 12);
+    drawText(ctx, `${Math.round(game.ship.vx).toString().padStart(4, "0")}`, x + 18, y + 382, COLORS.white, 16);
+    drawText(ctx, `${Math.round(game.ship.vy).toString().padStart(4, "0")}`, x + 18, y + 410, COLORS.white, 16);
+
+    drawText(ctx, "AUTO NAV", x + 18, y + 470, COLORS.amber, 14);
+  }
+
+  drawBossBubblePenalty(ctx, game, x, y) {
+    const progress = game.bossBubblePenaltyProgress ?? 0;
+    drawText(ctx, "BOSS BUB", x, y, COLORS.muted, 11);
+
+    for (let i = 0; i < 5; i += 1) {
+      const px = x + i * 18;
+      const active = i < progress;
+      drawRing(ctx, px + 6, y + 26, 6, active ? COLORS.heart : COLORS.cyanDim, active ? 0.9 : 0.36, 1);
+      if (active) {
+        ctx.fillStyle = withAlpha(COLORS.heart, 0.34);
+        ctx.fillRect(px + 3, y + 23, 6, 6);
+      }
+    }
   }
 
   getLogoPath() {
@@ -258,7 +284,7 @@ export class Hud {
     const alpha = clamp(0.62 + pulse + proximity * 0.24, 0.3, 1);
     const sweep = reduced ? 0.48 : (t * 0.18) % 1;
 
-    drawRect(ctx, x - 14, y - 12, size + 28, 138, COLORS.cyanDim, "rgba(17, 19, 20, 0.42)", 1, 0.72);
+    drawRect(ctx, x - 14, y - 12, size + 28, 138, COLORS.cyanDim, "rgba(42, 18, 54, 0.44)", 1, 0.72);
     drawRect(ctx, x - 8, y - 6, size + 16, 126, withAlpha(COLORS.cyan, 0.42), null, 1);
     drawPixelLine(ctx, x - 2, y + 6, x + 18, y + 6, COLORS.amber, 0.72);
     drawPixelLine(ctx, x + size - 18, y + 112, x + size + 2, y + 112, COLORS.amber, 0.62);
@@ -318,7 +344,7 @@ export class Hud {
     const h = 112;
     const t = game.totalTime;
 
-    drawRect(ctx, x, y, w, h, COLORS.cyanDim, "rgba(17, 19, 20, 0.78)", 1);
+    drawRect(ctx, x, y, w, h, COLORS.cyanDim, "rgba(42, 18, 54, 0.62)", 1);
     drawText(ctx, "SCORE", x + 22, y + 20, COLORS.muted, 13);
     drawText(ctx, formatScore(game.score), x + 102, y + 16, COLORS.white, 20);
     drawText(ctx, "TIME", x + 280, y + 20, COLORS.muted, 13);
@@ -332,16 +358,51 @@ export class Hud {
     drawText(ctx, "BUB", x + 1018, y + 20, COLORS.muted, 13);
     drawText(ctx, String(game.spawn.bubbles.length).padStart(2, "0"), x + 1078, y + 16, COLORS.white, 20);
 
-    for (let i = 0; i < 34; i += 1) {
-      const blockX = x + 22 + i * 22;
-      const height = 8 + Math.round((Math.sin(t * 2.4 + i * 0.62) * 0.5 + 0.5) * 32);
+    for (let i = 0; i < 48; i += 1) {
+      const blockX = x + 22 + i * 16;
+      const height = 3 + Math.round((Math.sin(t * 2.4 + i * 0.62) * 0.5 + 0.5) * 14);
       const hot = (i + Math.floor(t * 8)) % 9 === 0;
       ctx.fillStyle = hot ? COLORS.amber : withAlpha(COLORS.cyan, 0.42);
-      ctx.fillRect(blockX, y + 82 - height, 12, height);
+      ctx.fillRect(blockX, y + 104 - height, 9, height);
     }
 
+    this.drawLives(ctx, game, x + 22, y + 68);
+    this.drawBossStatus(ctx, game, x + 280, y + 70);
     drawText(ctx, `DIFF ${game.spawn.difficulty}`, x + 870, y + 70, COLORS.muted, 11);
     drawText(ctx, `LEAK ${String(game.unstableLeaks).padStart(2, "0")}`, x + 1018, y + 70, game.unstableLeaks > 0 ? COLORS.red : COLORS.muted, 11);
+  }
+
+  drawLives(ctx, game, x, y) {
+    drawText(ctx, "HULL", x, y, COLORS.muted, 11);
+    const lives = game.shipLives ?? 0;
+
+    for (let i = 0; i < 3; i += 1) {
+      this.drawHeart(ctx, x + 58 + i * 28, y + 6, i < lives);
+    }
+  }
+
+  drawHeart(ctx, x, y, active) {
+    ctx.save();
+    ctx.translate(Math.round(x), Math.round(y));
+    ctx.fillStyle = active ? COLORS.heart : withAlpha(COLORS.violet, 0.34);
+    ctx.strokeStyle = active ? withAlpha(COLORS.white, 0.45) : withAlpha(COLORS.cyanDim, 0.38);
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, 8);
+    ctx.bezierCurveTo(-18, -4, -7, -18, 0, -9);
+    ctx.bezierCurveTo(7, -18, 18, -4, 0, 8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  drawBossStatus(ctx, game, x, y) {
+    if (!game.boss) return;
+    const value = game.boss.maxHp > 0 ? game.boss.hp / game.boss.maxHp : 0;
+    drawText(ctx, "CORE", x, y, COLORS.muted, 11);
+    drawBar(ctx, x + 60, y + 2, 128, 9, value, value <= 0.25 ? COLORS.orangeHot : COLORS.orange, withAlpha(COLORS.violet, 0.35));
+    drawText(ctx, `${String(game.boss.hp).padStart(2, "0")}/25`, x + 204, y - 2, COLORS.white, 12);
   }
 
   drawControlPad(ctx, game) {
@@ -349,14 +410,34 @@ export class Hud {
 
     for (const button of this.getControlButtons()) {
       const isActive = active === button.id;
-      drawRect(ctx, button.x, button.y, button.w, button.h, isActive ? COLORS.amber : COLORS.cyanDim, isActive ? "rgba(255, 122, 22, 0.16)" : "rgba(17, 19, 20, 0.72)", 1);
-      drawText(ctx, button.label, button.x + button.w / 2, button.y + 15, isActive ? COLORS.amber : COLORS.cyan, 18, "center");
+      drawRect(ctx, button.x, button.y, button.w, button.h, isActive ? COLORS.orange : COLORS.cyanDim, isActive ? "rgba(255, 138, 0, 0.16)" : "rgba(42, 18, 54, 0.48)", 1);
+      drawText(ctx, button.label, button.x + button.w / 2, button.y + 15, isActive ? COLORS.orange : COLORS.cyan, 18, "center");
     }
+
+    this.drawFireButton(ctx, game);
+  }
+
+  drawFireButton(ctx, game) {
+    const button = this.getFireButton();
+    const ready = game.shootCooldown <= 0;
+    const color = ready ? COLORS.orange : COLORS.cyanDim;
+    const fill = ready ? "rgba(255, 138, 0, 0.16)" : "rgba(42, 18, 54, 0.48)";
+    const centerX = button.x + button.w / 2;
+    const centerY = button.y + button.h / 2;
+
+    drawRect(ctx, button.x, button.y, button.w, button.h, color, fill, 1);
+    drawRing(ctx, centerX, centerY, 18, color, ready ? 0.82 : 0.36, 2);
+    drawRing(ctx, centerX, centerY, 7, ready ? COLORS.amber : COLORS.cyanDim, ready ? 0.72 : 0.3, 1);
+    drawPixelLine(ctx, centerX - 24, centerY, centerX - 12, centerY, color, ready ? 0.9 : 0.36);
+    drawPixelLine(ctx, centerX + 12, centerY, centerX + 24, centerY, color, ready ? 0.9 : 0.36);
+    drawPixelLine(ctx, centerX, centerY - 24, centerX, centerY - 12, color, ready ? 0.9 : 0.36);
+    drawPixelLine(ctx, centerX, centerY + 12, centerX, centerY + 24, color, ready ? 0.9 : 0.36);
+    drawText(ctx, "FIRE", centerX, button.y + 51, ready ? COLORS.orange : COLORS.cyanDim, 8, "center");
   }
 
   drawBoot(ctx, game) {
     const progress = clamp(game.stateTime / 0.8, 0, 1);
-    drawRect(ctx, 440, 390, 520, 28, COLORS.cyan, "rgba(17, 19, 20, 0.72)", 1);
+    drawRect(ctx, 440, 390, 520, 28, COLORS.cyan, "rgba(42, 18, 54, 0.52)", 1);
     drawBar(ctx, 446, 398, 508, 12, progress, COLORS.cyan);
     drawText(ctx, "BOOT SEQUENCE", GAME_WIDTH / 2, 336, COLORS.cyan, 34, "center");
   }
@@ -383,7 +464,7 @@ export class Hud {
 
   drawGameOver(ctx, game) {
     this.drawDim(ctx, 0.58);
-    drawText(ctx, "GAME OVER", GAME_WIDTH / 2, 300, COLORS.red, 46, "center");
+    drawText(ctx, game.victory ? "HAS GANADO" : "GAME OVER", GAME_WIDTH / 2, 300, game.victory ? COLORS.amber : COLORS.red, 46, "center");
     drawText(ctx, game.gameOverReason, GAME_WIDTH / 2, 360, COLORS.amber, 22, "center");
     drawText(ctx, `FINAL SCORE ${formatScore(game.score)}`, GAME_WIDTH / 2, 414, COLORS.white, 22, "center");
     drawText(ctx, "CLICK / TAP OR R TO RESTART", GAME_WIDTH / 2, 470, COLORS.cyan, 18, "center");

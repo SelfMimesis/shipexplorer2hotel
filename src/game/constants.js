@@ -14,22 +14,30 @@ export const GAME_STATES = {
 };
 
 export const COLORS = {
-  black: "#111314",
-  void: "#181b1c",
-  panel: "#15191a",
-  panelDeep: "#0d1011",
-  cyan: "#44e0c0",
-  cyanDim: "#1f7d72",
-  teal: "#1f7d72",
-  tealDark: "#14524c",
-  amber: "#ff7a16",
-  amberDim: "#7f3c10",
-  red: "#e75a4f",
-  redDim: "#71302d",
-  white: "#d7e3df",
-  muted: "#7f9695",
-  blue: "#3c8dff",
-  violet: "#7354ff",
+  black: "#000000",
+  void: "#14051D",
+  panel: "#2A1236",
+  panelDeep: "#07020A",
+  cyan: "#9D00FF",
+  cyanDim: "#8830BF",
+  teal: "#B84DFF",
+  tealDark: "#674080",
+  amber: "#D6FF00",
+  amberDim: "#98AA39",
+  orange: "#FF8A00",
+  orangeHot: "#FF4D00",
+  orangeDim: "#9B3E17",
+  red: "#FF5A1F",
+  redDim: "#7E2A12",
+  heart: "#FF2F55",
+  white: "#F3E8FF",
+  muted: "#98AA39",
+  blue: "#5F3DFF",
+  violet: "#674080",
+  violetBright: "#8830BF",
+  magentaHot: "#C600FF",
+  lime: "#D6FF00",
+  olive: "#98AA39",
 };
 
 export const FONT_FAMILY = '"Automatron", "Consolas", monospace';
@@ -54,8 +62,8 @@ export const BUBBLE_TYPES = [
   },
   {
     id: "amber",
-    color: COLORS.amber,
-    dim: COLORS.amberDim,
+    color: COLORS.orange,
+    dim: COLORS.orangeDim,
     points: 160,
     radius: [22, 36],
     life: [5.8, 7.8],
@@ -64,7 +72,7 @@ export const BUBBLE_TYPES = [
   },
   {
     id: "red",
-    color: COLORS.red,
+    color: COLORS.orangeHot,
     dim: COLORS.redDim,
     points: 260,
     radius: [18, 30],
@@ -85,8 +93,8 @@ export const BUBBLE_TYPES = [
 ];
 
 export const GAME_RULES = {
-  duration: 60,
-  lives: 4,
+  duration: 120,
+  lives: 3,
   bubbleLimit: 18,
   baseSpawnEvery: 0.92,
   minSpawnEvery: 0.32,

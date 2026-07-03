@@ -7,15 +7,16 @@
   <style>
     :root {
       color-scheme: dark;
-      --bg: #111314;
-      --panel: #181b1c;
-      --deep: #0d1011;
-      --cyan: #44e0c0;
-      --teal: #1f7d72;
-      --muted: #7f9695;
-      --amber: #ff7a16;
-      --red: #e75a4f;
-      --white: #d7e3df;
+      --bg: #000000;
+      --panel: #2A1236;
+      --deep: #000000;
+      --cyan: #9D00FF;
+      --teal: #B84DFF;
+      --muted: #98AA39;
+      --amber: #D6FF00;
+      --orange: #FF8A00;
+      --red: #FF5A1F;
+      --white: #F3E8FF;
     }
 
     * {
@@ -28,9 +29,9 @@
       display: grid;
       place-items: center;
       background:
-        linear-gradient(rgba(68, 224, 192, 0.035) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(68, 224, 192, 0.035) 1px, transparent 1px),
-        radial-gradient(circle at 50% 0%, rgba(68, 224, 192, 0.08), transparent 42%),
+        linear-gradient(rgba(157, 0, 255, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(157, 0, 255, 0.04) 1px, transparent 1px),
+        radial-gradient(circle at 50% 0%, rgba(255, 138, 0, 0.08), transparent 42%),
         var(--bg);
       background-size: 28px 28px, 28px 28px, auto;
       color: var(--white);
@@ -41,8 +42,8 @@
     main {
       width: min(720px, 100%);
       border: 1px solid var(--teal);
-      background: rgba(24, 27, 28, 0.94);
-      box-shadow: 0 0 0 1px rgba(68, 224, 192, 0.18), 0 18px 90px rgba(0, 0, 0, 0.5);
+      background: rgba(42, 18, 54, 0.58);
+      box-shadow: 0 0 0 1px rgba(157, 0, 255, 0.2), 0 18px 90px rgba(0, 0, 0, 0.5);
       padding: 22px;
     }
 
@@ -51,7 +52,7 @@
       gap: 14px;
       align-items: center;
       justify-content: space-between;
-      border-bottom: 1px solid rgba(31, 125, 114, 0.6);
+      border-bottom: 1px solid rgba(136, 48, 191, 0.6);
       padding-bottom: 16px;
       margin-bottom: 18px;
     }
@@ -72,10 +73,10 @@
       place-items: center;
       min-height: 72px;
       padding: 0;
-      border: 1px solid rgba(68, 224, 192, 0.56);
-      background: radial-gradient(circle at 50% 50%, rgba(255, 122, 22, 0.14), rgba(13, 16, 17, 0.92) 64%);
+      border: 1px solid rgba(157, 0, 255, 0.56);
+      background: radial-gradient(circle at 50% 50%, rgba(255, 138, 0, 0.14), rgba(0, 0, 0, 0.92) 64%);
       color: var(--cyan);
-      box-shadow: 0 0 0 1px rgba(68, 224, 192, 0.13), 0 0 24px rgba(68, 224, 192, 0.13);
+      box-shadow: 0 0 0 1px rgba(157, 0, 255, 0.16), 0 0 24px rgba(157, 0, 255, 0.18);
       cursor: pointer;
       overflow: hidden;
     }
@@ -84,7 +85,7 @@
       content: "";
       position: absolute;
       inset: 6px;
-      border: 1px solid rgba(31, 125, 114, 0.38);
+      border: 1px solid rgba(136, 48, 191, 0.38);
       pointer-events: none;
     }
 
@@ -93,7 +94,7 @@
       height: 58px;
       object-fit: contain;
       mix-blend-mode: screen;
-      filter: hue-rotate(144deg) saturate(1.35) brightness(1.1) drop-shadow(0 0 10px rgba(68, 224, 192, 0.28));
+      filter: saturate(1.25) brightness(1.1) drop-shadow(0 0 10px rgba(157, 0, 255, 0.32));
     }
 
     .controller-logo-fallback {
@@ -103,21 +104,21 @@
       line-height: 0.88;
       letter-spacing: 0.08em;
       text-align: center;
-      text-shadow: 0 0 12px rgba(68, 224, 192, 0.38);
+      text-shadow: 0 0 12px rgba(157, 0, 255, 0.42);
     }
 
     .controller-logo-toggle:hover,
     .controller-logo-toggle:focus-visible {
       border-color: var(--amber);
       color: var(--amber);
-      background: radial-gradient(circle at 50% 50%, rgba(68, 224, 192, 0.14), rgba(13, 16, 17, 0.94) 64%);
+      background: radial-gradient(circle at 50% 50%, rgba(157, 0, 255, 0.14), rgba(0, 0, 0, 0.94) 64%);
       outline: none;
-      box-shadow: 0 0 0 1px rgba(255, 122, 22, 0.2), 0 0 28px rgba(255, 122, 22, 0.16);
+      box-shadow: 0 0 0 1px rgba(255, 138, 0, 0.24), 0 0 28px rgba(255, 138, 0, 0.2);
     }
 
     .controller-logo-toggle:hover .controller-logo,
     .controller-logo-toggle:focus-visible .controller-logo {
-      filter: saturate(0.86) brightness(1.08) drop-shadow(0 0 10px rgba(255, 122, 22, 0.28));
+      filter: saturate(1.12) brightness(1.1) drop-shadow(0 0 10px rgba(255, 138, 0, 0.34));
     }
 
     h1 {
@@ -199,7 +200,7 @@
     select:focus,
     textarea:focus {
       border-color: var(--cyan);
-      box-shadow: 0 0 0 2px rgba(68, 224, 192, 0.14);
+      box-shadow: 0 0 0 2px rgba(157, 0, 255, 0.16);
     }
 
     .grid {
@@ -225,7 +226,7 @@
     button {
       min-height: 42px;
       border: 1px solid var(--cyan);
-      background: rgba(68, 224, 192, 0.08);
+      background: rgba(157, 0, 255, 0.08);
       color: var(--white);
       padding: 10px 14px;
       font: inherit;
@@ -237,7 +238,7 @@
     button:hover {
       border-color: var(--amber);
       color: var(--amber);
-      background: rgba(255, 122, 22, 0.12);
+      background: rgba(255, 138, 0, 0.12);
     }
 
     button.danger {
@@ -245,16 +246,16 @@
     }
 
     button:disabled {
-      border-color: rgba(127, 150, 149, 0.42);
-      background: rgba(127, 150, 149, 0.08);
-      color: rgba(127, 150, 149, 0.58);
+      border-color: rgba(152, 170, 57, 0.42);
+      background: rgba(152, 170, 57, 0.08);
+      color: rgba(152, 170, 57, 0.58);
       cursor: not-allowed;
     }
 
     button:disabled:hover {
-      border-color: rgba(127, 150, 149, 0.42);
-      background: rgba(127, 150, 149, 0.08);
-      color: rgba(127, 150, 149, 0.58);
+      border-color: rgba(152, 170, 57, 0.42);
+      background: rgba(152, 170, 57, 0.08);
+      color: rgba(152, 170, 57, 0.58);
     }
 
     .option {
@@ -286,7 +287,7 @@
     }
 
     .panel-section {
-      border-top: 1px solid rgba(31, 125, 114, 0.6);
+      border-top: 1px solid rgba(136, 48, 191, 0.6);
       margin-top: 22px;
       padding-top: 18px;
     }
@@ -301,7 +302,7 @@
 
     .video-status,
     .screen-status {
-      border: 1px solid rgba(31, 125, 114, 0.7);
+      border: 1px solid rgba(136, 48, 191, 0.7);
       background: var(--deep);
       color: var(--amber);
       padding: 9px 12px;
@@ -318,8 +319,8 @@
 
     .state,
     .logs {
-      border: 1px solid rgba(31, 125, 114, 0.7);
-      background: rgba(13, 16, 17, 0.72);
+      border: 1px solid rgba(136, 48, 191, 0.7);
+      background: rgba(42, 18, 54, 0.52);
       padding: 12px;
       margin-top: 18px;
     }
@@ -340,7 +341,7 @@
 
     .log-line {
       padding: 3px 0;
-      border-bottom: 1px solid rgba(31, 125, 114, 0.2);
+      border-bottom: 1px solid rgba(136, 48, 191, 0.24);
     }
 
     .log-line.error {

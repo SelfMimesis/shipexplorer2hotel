@@ -10,6 +10,7 @@ import {
   PLAYFIELD,
 } from "./constants.js";
 import { clamp, drawPixelLine, drawRing, drawText, lerp, screenToCanvasPoint, withAlpha } from "./utils.js";
+import { Boss } from "./entities/Boss.js";
 import { BackgroundHudSystem } from "./systems/BackgroundHudSystem.js";
 import { FloatingTextSystem } from "./systems/FloatingTextSystem.js";
 import { ParticleSystem } from "./systems/ParticleSystem.js";
@@ -21,6 +22,10 @@ import { Menu } from "./ui/Menu.js";
 const SHIP_RADIUS = 24;
 const SHIP_FIELD_RADIUS = 78;
 const SHIP_FIELD_PULSE = 5;
+const BULLET_SPEED = 520;
+const BULLET_LIFE = 1.8;
+const BULLET_RADIUS = 5;
+const SHOOT_COOLDOWN = 0.26;
 
 export class Game {
   constructor(canvas, ctx) {
@@ -43,6 +48,7 @@ export class Game {
     };
 
     this.keys = new Set();
+    this.activePointers = new Map();
     this.activeDirection = null;
 
     this.reducedMotion = this.getReducedMotionPreference();
@@ -60,6 +66,8 @@ export class Game {
     this.menu = new Menu();
     this.difficulty = "NORMAL";
     this.spawn = new SpawnSystem(this.difficulty);
+    this.boss = new Boss({ reducedMotion: this.reducedMotion });
+    this.boss.setProjectileExpireHandler((projectile) => this.handleBossBubbleEscaped(projectile));
     this.particles = new ParticleSystem({ reducedMotion: this.reducedMotion });
     this.shockwaves = new ShockwaveSystem({ reducedMotion: this.reducedMotion });
     this.floatingText = new FloatingTextSystem({ reducedMotion: this.reducedMotion });
@@ -78,6 +86,13 @@ export class Game {
     this.elapsed = 0;
     this.timeLeft = GAME_RULES.duration;
     this.gameOverReason = "RUN COMPLETE";
+    this.victory = false;
+    this.shipLives = GAME_RULES.lives;
+    this.shipInvulnerable = 0;
+    this.bullets = [];
+    this.shootCooldown = 0;
+    this.bossBubblePenaltyProgress = 0;
+    this.bossBubblePenaltyProgress = 0;
 
     this.bindInput();
     this.bindMotionPreference();
@@ -95,6 +110,7 @@ export class Game {
       this.reducedMotion = mediaQuery.matches;
       this.settings.reducedMotion = this.reducedMotion;
       this.background.setReducedMotion(this.reducedMotion);
+      this.boss.setReducedMotion(this.reducedMotion);
       this.particles.setReducedMotion(this.reducedMotion);
       this.shockwaves.setReducedMotion(this.reducedMotion);
       this.floatingText.setReducedMotion(this.reducedMotion);
@@ -156,9 +172,14 @@ export class Game {
   bindInput() {
     this.canvas.addEventListener("pointerdown", (event) => {
       event.preventDefault();
-      this.updatePointerFromEvent(event);
+      const point = this.updatePointerFromEvent(event);
+      this.activePointers.set(event.pointerId, point);
       if (!this.pointer.isDown) this.pointer.justPressed = true;
       this.pointer.isDown = true;
+
+      if (this.state === GAME_STATES.PLAYING && (this.hud.isPointInFireButton(point.x, point.y) || this.activePointers.size >= 2)) {
+        this.requestShoot();
+      }
 
       if (this.canvas.setPointerCapture) {
         this.canvas.setPointerCapture(event.pointerId);
@@ -167,22 +188,27 @@ export class Game {
 
     this.canvas.addEventListener("pointermove", (event) => {
       event.preventDefault();
-      this.updatePointerFromEvent(event);
+      const point = this.updatePointerFromEvent(event);
+      if (this.activePointers.has(event.pointerId)) {
+        this.activePointers.set(event.pointerId, point);
+      }
     });
 
     this.canvas.addEventListener("pointerup", (event) => {
       event.preventDefault();
       this.updatePointerFromEvent(event);
+      this.activePointers.delete(event.pointerId);
       if (this.pointer.isDown) this.pointer.justReleased = true;
-      this.pointer.isDown = false;
+      this.pointer.isDown = this.activePointers.size > 0;
       this.activeDirection = null;
     });
 
     this.canvas.addEventListener("pointercancel", (event) => {
       event.preventDefault();
       this.updatePointerFromEvent(event);
+      this.activePointers.delete(event.pointerId);
       if (this.pointer.isDown) this.pointer.justReleased = true;
-      this.pointer.isDown = false;
+      this.pointer.isDown = this.activePointers.size > 0;
       this.activeDirection = null;
     });
 
@@ -200,6 +226,11 @@ export class Game {
 
       if ((event.key === "r" || event.key === "R") && this.state === GAME_STATES.GAME_OVER) {
         this.restartRun();
+      }
+
+      if ((event.key === " " || event.key === "Enter") && this.state === GAME_STATES.PLAYING) {
+        event.preventDefault();
+        this.requestShoot();
       }
 
       if (event.key === "1") this.setDifficulty("CALM");
@@ -226,6 +257,7 @@ export class Game {
     const point = screenToCanvasPoint(event, this.canvas, GAME_WIDTH, GAME_HEIGHT);
     this.pointer.x = point.x;
     this.pointer.y = point.y;
+    return point;
   }
 
   changeState(nextState) {
@@ -260,6 +292,7 @@ export class Game {
     this.reducedMotion = Boolean(value);
     this.settings.reducedMotion = this.reducedMotion;
     this.background.setReducedMotion(this.reducedMotion);
+    this.boss.setReducedMotion(this.reducedMotion);
     this.particles.setReducedMotion(this.reducedMotion);
     this.shockwaves.setReducedMotion(this.reducedMotion);
     this.floatingText.setReducedMotion(this.reducedMotion);
@@ -279,8 +312,19 @@ export class Game {
     this.elapsed = 0;
     this.timeLeft = GAME_RULES.duration;
     this.gameOverReason = "RUN COMPLETE";
+    this.victory = false;
+    this.shipLives = GAME_RULES.lives;
+    this.shipInvulnerable = 0;
+    this.bullets = [];
+    this.shootCooldown = 0;
+    this.activePointers.clear();
+    this.pointer.isDown = false;
+    this.pointer.justPressed = false;
+    this.pointer.justReleased = false;
     this.ship = this.createShip();
     this.spawn.reset(this.difficulty);
+    this.boss.reset();
+    this.boss.setProjectileExpireHandler((projectile) => this.handleBossBubbleEscaped(projectile));
     this.background.reset();
     this.particles.reset();
     this.shockwaves.reset();
@@ -311,6 +355,7 @@ export class Game {
 
   toTitle() {
     this.spawn.reset(this.difficulty);
+    this.boss.reset();
     this.particles.reset();
     this.shockwaves.reset();
     this.floatingText.reset();
@@ -325,9 +370,16 @@ export class Game {
     }
   }
 
-  endRun(reason) {
+  endRun(reason, victory = false) {
     this.gameOverReason = reason;
+    this.victory = Boolean(victory);
     this.changeState(GAME_STATES.GAME_OVER);
+  }
+
+  winRun() {
+    if (this.victory) return;
+    this.score += 2500;
+    this.endRun("HAS GANADO", true);
   }
 
   fixedUpdate(dt) {
@@ -341,6 +393,8 @@ export class Game {
     this.shockwaves.update(dt);
     this.floatingText.update(dt);
     this.shakeTimer = Math.max(0, this.shakeTimer - dt);
+    this.shootCooldown = Math.max(0, this.shootCooldown - dt);
+    this.shipInvulnerable = Math.max(0, this.shipInvulnerable - dt);
 
     if (this.pointer.justPressed && this.handleMenuPointer()) {
       this.pointer.justPressed = false;
@@ -375,14 +429,153 @@ export class Game {
     this.elapsed += dt;
     this.timeLeft = Math.max(0, GAME_RULES.duration - this.elapsed);
     this.updateShip(dt);
+    this.boss.update(dt, this);
+    this.updateBullets(dt);
     this.spawn.update(dt, this);
     this.resolveShipBubbleCollisions();
+    this.resolveShipBossBubbleCollisions();
+    this.resolveShipBossCollision();
 
-    if (this.timeLeft <= 0) this.endRun("RUN COMPLETE");
+    if (this.boss.explosionComplete) this.winRun();
+    if (this.state === GAME_STATES.PLAYING && this.timeLeft <= 0 && this.boss.active) this.endRun("TIMEOUT");
   }
 
   updateGameOver(dt) {
     this.updateShip(dt * 0.45);
+  }
+
+  requestShoot() {
+    if (this.state !== GAME_STATES.PLAYING || this.shootCooldown > 0) return false;
+
+    const direction = this.getShotVector();
+    const startX = this.ship.x + direction.x * 34;
+    const startY = this.ship.y + direction.y * 34;
+
+    this.bullets.push({
+      x: startX,
+      y: startY,
+      prevX: startX,
+      prevY: startY,
+      vx: direction.x * BULLET_SPEED,
+      vy: direction.y * BULLET_SPEED,
+      age: 0,
+      dead: false,
+    });
+
+    this.shootCooldown = SHOOT_COOLDOWN;
+    this.particles.emitBurst(startX, startY, COLORS.orange, 6, 92);
+    return true;
+  }
+
+  getShotVector() {
+    if (Math.hypot(this.ship.vx, this.ship.vy) > 4) {
+      return this.normalize(this.ship.vx, this.ship.vy);
+    }
+
+    return this.normalize(Math.cos(this.ship.angle), Math.sin(this.ship.angle));
+  }
+
+  updateBullets(dt) {
+    for (const bullet of this.bullets) {
+      bullet.age += dt;
+      bullet.prevX = bullet.x;
+      bullet.prevY = bullet.y;
+      bullet.x += bullet.vx * dt;
+      bullet.y += bullet.vy * dt;
+
+      const bossBubble = this.boss.findProjectileAt(bullet.x, bullet.y, BULLET_RADIUS);
+      if (bossBubble) {
+        bullet.dead = true;
+        this.popBossBubble(bossBubble, bullet.x, bullet.y);
+        continue;
+      }
+
+      if (this.boss.hitCore(bullet.x, bullet.y, BULLET_RADIUS)) {
+        bullet.dead = true;
+        this.handleBossCoreHit(bullet.x, bullet.y);
+      }
+    }
+
+    this.bullets = this.bullets.filter(
+      (bullet) =>
+        !bullet.dead &&
+        bullet.age < BULLET_LIFE &&
+        bullet.x >= PLAYFIELD.left - 32 &&
+        bullet.x <= PLAYFIELD.right + 32 &&
+        bullet.y >= PLAYFIELD.top - 32 &&
+        bullet.y <= PLAYFIELD.bottom + 32
+    );
+  }
+
+  popBossBubble(projectile, x = projectile.x, y = projectile.y) {
+    if (!this.boss.popProjectile(projectile)) return false;
+
+    this.score += 35;
+    this.particles.emitBurst(x, y, COLORS.heart, 14, 160);
+    this.shockwaves.add(x, y, COLORS.heart, 42);
+    this.floatingText.add("POP", x, y - 22, COLORS.heart, 14, { life: 0.42 });
+    return true;
+  }
+
+  handleBossBubbleEscaped(projectile) {
+    if (this.state !== GAME_STATES.PLAYING || this.victory) return;
+
+    this.bossBubblePenaltyProgress += 1;
+    this.floatingText.add("UNPOPPED", projectile.x, projectile.y - 28, COLORS.heart, 14, { life: 0.58, glitch: true });
+
+    if (this.bossBubblePenaltyProgress < 5) return;
+
+    this.bossBubblePenaltyProgress = 0;
+    this.shipLives = Math.max(0, this.shipLives - 1);
+    this.shipInvulnerable = Math.max(this.shipInvulnerable, 0.9);
+    this.addShake(0.24);
+    this.shockwaves.add(this.ship.x, this.ship.y, COLORS.heart, 68);
+    this.particles.emitBurst(this.ship.x, this.ship.y, COLORS.heart, 20, 190);
+    this.floatingText.add("HULL -1", this.ship.x, this.ship.y - 48, COLORS.heart, 18, { life: 0.72, glitch: true });
+
+    if (this.shipLives <= 0) {
+      this.endRun("SHIP DESTROYED");
+    }
+  }
+
+  handleBossCoreHit(x, y) {
+    if (!this.boss.takeHit()) return;
+
+    this.score += 80;
+    this.addShake(this.boss.defeated ? 0.42 : 0.12);
+    this.particles.emitBurst(x, y, this.boss.defeated ? COLORS.amber : COLORS.orange, this.boss.defeated ? 42 : 14, this.boss.defeated ? 290 : 150);
+    this.shockwaves.add(x, y, this.boss.defeated ? COLORS.amber : COLORS.orange, this.boss.defeated ? 118 : 44);
+    this.floatingText.add(this.boss.defeated ? "CORE BREAK" : "-1 CORE", x, y - 26, this.boss.defeated ? COLORS.amber : COLORS.orange, this.boss.defeated ? 22 : 16, {
+      life: this.boss.defeated ? 0.95 : 0.48,
+      glitch: this.boss.defeated,
+    });
+  }
+
+  resolveShipBossCollision() {
+    if (this.shipInvulnerable > 0 || !this.boss.active) return;
+    if (!this.boss.touchesShip(this.ship, SHIP_RADIUS)) return;
+
+    this.shipLives = Math.max(0, this.shipLives - 1);
+    this.shipInvulnerable = 1.35;
+    this.combo = 0;
+    this.multiplier = 1;
+
+    const away = this.normalize(this.ship.x - this.boss.x, this.ship.y - this.boss.y);
+    const direction = away.x === 0 && away.y === 0 ? { x: -1, y: 0 } : away;
+    this.ship.x = clamp(this.ship.x + direction.x * 76, PLAYFIELD.left + SHIP_RADIUS, PLAYFIELD.right - SHIP_RADIUS);
+    this.ship.y = clamp(this.ship.y + direction.y * 76, PLAYFIELD.top + SHIP_RADIUS, PLAYFIELD.bottom - SHIP_RADIUS);
+    this.ship.vx = direction.x * 170;
+    this.ship.vy = direction.y * 170;
+    this.setShipDrift(direction);
+
+    this.addShake(0.28);
+    this.shockwaves.add(this.ship.x, this.ship.y, COLORS.red, 72);
+    this.particles.emitBurst(this.ship.x, this.ship.y, COLORS.red, 18, 210);
+    this.floatingText.add("HULL HIT", this.ship.x, this.ship.y - 44, COLORS.red, 18, { life: 0.62, glitch: true });
+
+    if (this.shipLives <= 0) {
+      this.endRun("SHIP DESTROYED");
+    }
   }
 
   handleMenuPointer() {
@@ -474,6 +667,16 @@ export class Game {
     for (const bubble of [...this.spawn.bubbles]) {
       if (this.doesShipFieldTouchBubble(bubble, radius)) {
         this.popBubble(bubble);
+      }
+    }
+  }
+
+  resolveShipBossBubbleCollisions() {
+    const radius = this.getShipFieldRadius();
+
+    for (const projectile of [...this.boss.projectiles]) {
+      if (Math.hypot(projectile.x - this.ship.x, projectile.y - this.ship.y) <= radius + projectile.radius) {
+        this.popBossBubble(projectile);
       }
     }
   }
@@ -636,6 +839,8 @@ export class Game {
 
     this.background.render(ctx, this);
     this.spawn.draw(ctx, this.totalTime);
+    this.boss.render(ctx, this);
+    this.drawBullets(ctx);
     this.shockwaves.render(ctx);
     this.particles.render(ctx);
     this.drawShip(interpolation);
@@ -648,10 +853,21 @@ export class Game {
     ctx.restore();
   }
 
+  drawBullets(ctx) {
+    for (const bullet of this.bullets) {
+      const alpha = clamp(1 - bullet.age / BULLET_LIFE, 0, 1);
+      drawPixelLine(ctx, bullet.prevX, bullet.prevY, bullet.x, bullet.y, COLORS.orange, alpha, 3);
+      drawRing(ctx, bullet.x, bullet.y, BULLET_RADIUS + 5, COLORS.amber, alpha * 0.28, 1);
+      ctx.fillStyle = withAlpha(COLORS.white, alpha);
+      ctx.fillRect(Math.round(bullet.x) - 2, Math.round(bullet.y) - 2, 4, 4);
+    }
+  }
+
   drawShip(interpolation) {
     const ctx = this.ctx;
     const x = Math.round(lerp(this.ship.prevX, this.ship.x, interpolation));
     const y = Math.round(lerp(this.ship.prevY, this.ship.y, interpolation));
+    const shipAlpha = this.shipInvulnerable > 0 && Math.floor(this.totalTime * 18) % 2 === 0 ? 0.48 : 1;
 
     for (const point of this.ship.trail) {
       const alpha = 1 - point.age / 0.55;
@@ -660,9 +876,14 @@ export class Game {
     }
 
     drawRing(ctx, x, y, 48 + Math.sin(this.ship.pulse * 8) * 4, COLORS.cyan, 0.18, 1);
-    drawRing(ctx, x, y, this.getShipFieldRadius(), COLORS.amber, 0.12, 1);
+    drawRing(ctx, x, y, this.getShipFieldRadius(), COLORS.orange, 0.12, 1);
+
+    if (this.shipInvulnerable > 0) {
+      drawRing(ctx, x, y, 58 + Math.sin(this.totalTime * 20) * 4, COLORS.red, 0.24, 1);
+    }
 
     ctx.save();
+    ctx.globalAlpha = shipAlpha;
     ctx.translate(x, y);
     ctx.rotate(this.ship.angle);
 
@@ -683,7 +904,7 @@ export class Game {
     ctx.fillStyle = COLORS.cyan;
     ctx.fillRect(-18, -21, 10, 6);
     ctx.fillRect(-18, 15, 10, 6);
-    ctx.fillStyle = COLORS.amber;
+    ctx.fillStyle = COLORS.orange;
     ctx.fillRect(-34, -4, 13 + Math.round(Math.sin(this.ship.pulse * 30) * 4), 8);
 
     ctx.restore();

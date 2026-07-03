@@ -159,9 +159,11 @@ export class Menu {
 
   drawGameOver(ctx, game) {
     this.drawOverlay(ctx, 0.68);
-    this.drawPanel(ctx, GAME_WIDTH / 2 - 360, 190, 720, 430, COLORS.red);
+    const color = game.victory ? COLORS.amber : COLORS.red;
+    const title = game.victory ? "HAS GANADO" : "GAME OVER";
+    this.drawPanel(ctx, GAME_WIDTH / 2 - 360, 190, 720, 430, color);
 
-    drawText(ctx, this.text("gameover", "GAME OVER"), GAME_WIDTH / 2, 236, COLORS.red, 42, "center");
+    drawText(ctx, this.text("gameover", title), GAME_WIDTH / 2, 236, color, 42, "center");
     drawText(ctx, "FINAL SCORE", GAME_WIDTH / 2 - 210, 316, COLORS.muted, 16);
     drawText(ctx, formatScore(game.score), GAME_WIDTH / 2 + 210, 312, COLORS.white, 24, "right");
     drawText(ctx, "ACCURACY", GAME_WIDTH / 2 - 210, 362, COLORS.muted, 16);
@@ -174,14 +176,14 @@ export class Menu {
 
   drawButton(ctx, button) {
     const hovered = this.hoveredId === button.id;
-    const color = hovered ? COLORS.amber : COLORS.cyan;
-    const fill = hovered ? "rgba(255, 122, 22, 0.16)" : "rgba(17, 19, 20, 0.82)";
+    const color = hovered ? COLORS.orange : COLORS.cyan;
+    const fill = hovered ? "rgba(255, 138, 0, 0.14)" : "rgba(42, 18, 54, 0.52)";
 
     drawRect(ctx, button.x, button.y, button.w, button.h, color, fill, 1);
-    drawText(ctx, this.text(`button-${button.id}-${button.label}`, button.label), button.x + button.w / 2, button.y + button.h / 2 - 9, hovered ? COLORS.amber : COLORS.white, button.h < 40 ? 15 : 18, "center");
+    drawText(ctx, this.text(`button-${button.id}-${button.label}`, button.label), button.x + button.w / 2, button.y + button.h / 2 - 9, hovered ? COLORS.orange : COLORS.white, button.h < 40 ? 15 : 18, "center");
 
     if (hovered) {
-      drawRect(ctx, button.x - 4, button.y - 4, button.w + 8, button.h + 8, COLORS.amber, null, 1, 0.5);
+      drawRect(ctx, button.x - 4, button.y - 4, button.w + 8, button.h + 8, COLORS.orange, null, 1, 0.5);
     }
   }
 
@@ -191,7 +193,7 @@ export class Menu {
   }
 
   drawPanel(ctx, x, y, w, h, color) {
-    drawRect(ctx, x, y, w, h, color, "rgba(17, 19, 20, 0.86)", 1);
+    drawRect(ctx, x, y, w, h, color, "rgba(42, 18, 54, 0.6)", 1);
     drawRect(ctx, x + 10, y + 10, w - 20, h - 20, withAlpha(color, 0.6), null, 1);
     drawRect(ctx, x - 8, y - 8, w + 16, h + 16, withAlpha(color, 0.34), null, 1);
   }

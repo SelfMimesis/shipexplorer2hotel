@@ -32,7 +32,7 @@ export class FloatingTextSystem {
   }
 
   emitPop(x, y, value, type = "normal", multiplier = 1) {
-    const color = type === "bonus" ? COLORS.amber : type === "unstable" ? COLORS.red : COLORS.cyan;
+    const color = type === "bonus" ? COLORS.orange : type === "unstable" ? COLORS.orangeHot : COLORS.cyan;
     const amount = `+${Math.round(value)}`;
     const suffix = multiplier > 1 ? ` X${multiplier.toFixed(2)}` : "";
 

@@ -191,7 +191,7 @@ export class BackgroundHudSystem {
   drawBase(ctx) {
     ctx.fillStyle = COLORS.black;
     ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-    ctx.fillStyle = "rgba(24, 27, 28, 0.52)";
+    ctx.fillStyle = "rgba(20, 5, 29, 0.26)";
     ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
   }
 

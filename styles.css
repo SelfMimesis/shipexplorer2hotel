@@ -6,12 +6,13 @@
 
 :root {
   color-scheme: dark;
-  --bg: #050607;
-  --panel: #071318;
-  --cyan: #38f5e7;
-  --teal: #0fb7a3;
-  --amber: #ff9d2e;
-  --red: #ff3f36;
+  --bg: #000000;
+  --panel: #2a1236;
+  --cyan: #9d00ff;
+  --teal: #b84dff;
+  --amber: #d6ff00;
+  --orange: #ff8a00;
+  --red: #ff5a1f;
 }
 
 * {
@@ -56,18 +57,19 @@ body {
   max-width: calc(100vw - 16px);
   max-height: calc(100vh - 48px);
   aspect-ratio: 1400 / 800;
-  background: #020508;
+  background: #000000;
   color: var(--cyan);
   font-family: "Automatron", "Consolas", monospace;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
   touch-action: none;
   user-select: none;
-  outline: 1px solid rgba(56, 245, 231, 0.45);
+  outline: 1px solid rgba(157, 0, 255, 0.5);
   box-shadow:
-    0 0 0 2px rgba(6, 21, 24, 0.95),
-    0 0 22px rgba(56, 245, 231, 0.35),
-    0 0 48px rgba(255, 86, 40, 0.16);
+    0 0 0 2px rgba(0, 0, 0, 0.95),
+    0 0 22px rgba(157, 0, 255, 0.42),
+    0 0 46px rgba(255, 138, 0, 0.18),
+    0 0 62px rgba(214, 255, 0, 0.12);
 }
 
 .fullscreen-button,
@@ -83,14 +85,14 @@ noscript {
   z-index: 10;
   min-width: 44px;
   height: 28px;
-  border: 1px solid rgba(56, 245, 231, 0.72);
-  background: rgba(4, 16, 19, 0.82);
+  border: 1px solid rgba(157, 0, 255, 0.72);
+  background: rgba(103, 64, 128, 0.42);
   color: var(--cyan);
   font-size: 8px;
   line-height: 1;
   letter-spacing: 0;
   cursor: pointer;
-  box-shadow: 0 0 12px rgba(56, 245, 231, 0.18);
+  box-shadow: 0 0 12px rgba(157, 0, 255, 0.24);
 }
 
 .fullscreen-button:hover,
@@ -102,7 +104,7 @@ noscript {
 
 .calibration {
   margin: 0;
-  color: rgba(56, 245, 231, 0.62);
+  color: rgba(214, 255, 0, 0.62);
   font-size: 7px;
   letter-spacing: 0;
   text-align: center;

@@ -127,7 +127,7 @@ export const drawRect = (ctx, x, y, width, height, stroke, fill = null, lineWidt
   ctx.restore();
 };
 
-export const drawBar = (ctx, x, y, width, height, value, color, backColor = "rgba(31, 125, 114, 0.18)") => {
+export const drawBar = (ctx, x, y, width, height, value, color, backColor = "rgba(136, 48, 191, 0.22)") => {
   const ix = Math.round(x);
   const iy = Math.round(y);
   const iw = Math.round(width);
@@ -151,7 +151,7 @@ export const drawRing = (ctx, x, y, radius, color, alpha = 1, width = 1, start =
   ctx.restore();
 };
 
-export const drawPanel = (ctx, x, y, width, height, color, fill = "rgba(4, 16, 19, 0.72)") => {
+export const drawPanel = (ctx, x, y, width, height, color, fill = "rgba(42, 18, 54, 0.38)") => {
   const ix = Math.round(x);
   const iy = Math.round(y);
   const iw = Math.round(width);
