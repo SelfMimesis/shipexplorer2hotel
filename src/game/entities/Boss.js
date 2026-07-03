@@ -368,7 +368,6 @@ export class Boss {
       const node = this.getOrbitBubblePosition(this.orbitBubbles[i]);
       const pulse = Math.sin(node.phase) * 1.4;
       const radius = node.size + pulse;
-      const coreColor = mixHex(PROJECTILE_START, PROJECTILE_END, 0.18 + i * 0.12);
 
       ctx.fillStyle = COLORS.black;
       ctx.beginPath();
@@ -376,9 +375,7 @@ export class Boss {
       ctx.fill();
       drawRing(ctx, node.x, node.y, radius + 6, COLORS.amber, 0.22, 1);
       drawRing(ctx, node.x, node.y, radius, COLORS.amber, 0.96, 2);
-      drawRing(ctx, node.x, node.y, Math.max(4, radius * 0.56), coreColor, 0.72, 1);
-      drawRing(ctx, node.x, node.y, Math.max(3, radius * 0.3), PROJECTILE_START, 0.58, 1);
-      drawText(ctx, "!", node.x, node.y - 10, COLORS.amber, 16, "center");
+      drawRing(ctx, node.x, node.y, Math.max(4, radius * 0.54), COLORS.black, 0.9, 1);
     }
   }
 
@@ -392,6 +389,7 @@ export class Boss {
       const accent = mixHex(COLORS.magentaHot, COLORS.heart, lifeProgress);
       const start = -Math.PI / 2;
       const end = start + Math.PI * 2 * (1 - lifeProgress);
+      const warningAlpha = clamp((projectile.age / 0.42) * (0.35 + projectile.morph * 0.65), 0, 1);
 
       if (simpleAlpha > 0.02) {
         ctx.fillStyle = withAlpha(COLORS.black, 0.96 * simpleAlpha);
@@ -400,7 +398,6 @@ export class Boss {
         ctx.fill();
         drawRing(ctx, projectile.x, projectile.y, radius + 5, COLORS.amber, 0.18 * simpleAlpha, 1);
         drawRing(ctx, projectile.x, projectile.y, radius, COLORS.amber, 0.92 * simpleAlpha, 2);
-        drawRing(ctx, projectile.x, projectile.y, Math.max(5, radius * 0.56), color, 0.66 * simpleAlpha, 1);
       }
 
       if (bubbleAlpha > 0.02) {
@@ -420,8 +417,9 @@ export class Boss {
       const timerRadius = radius + 17 + bubbleAlpha * 6;
       const warningSize = Math.max(15, Math.round(radius * 0.88));
       drawRing(ctx, projectile.x, projectile.y, timerRadius, COLORS.amber, 0.84, 2, start, end);
-      drawText(ctx, "!", projectile.x + 1, projectile.y - warningSize * 0.54 + 1, COLORS.black, warningSize, "center");
-      drawText(ctx, "!", projectile.x, projectile.y - warningSize * 0.54, COLORS.amber, warningSize, "center");
+      drawRing(ctx, projectile.x, projectile.y, Math.max(5, radius * 0.56), color, 0.66 * warningAlpha, 1);
+      drawText(ctx, "!", projectile.x + 1, projectile.y - warningSize * 0.54 + 1, withAlpha(COLORS.black, warningAlpha), warningSize, "center");
+      drawText(ctx, "!", projectile.x, projectile.y - warningSize * 0.54, withAlpha(COLORS.amber, warningAlpha), warningSize, "center");
     }
   }
 

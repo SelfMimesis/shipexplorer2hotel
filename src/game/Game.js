@@ -461,6 +461,7 @@ export class Game {
     this.boss.update(dt, this);
     this.updateBullets(dt);
     this.spawn.update(dt, this);
+    this.resolveBubbleBossBounces();
     this.resolveShipBubbleCollisions();
     this.resolveShipBossBubbleCollisions();
     this.resolveShipBossCollision();
@@ -741,6 +742,16 @@ export class Game {
     for (const bubble of [...this.spawn.bubbles]) {
       if (this.doesShipFieldTouchBubble(bubble, radius)) {
         this.popBubble(bubble);
+      }
+    }
+  }
+
+  resolveBubbleBossBounces() {
+    if (!this.boss.active) return;
+
+    for (const bubble of this.spawn.bubbles) {
+      if (bubble.bounceOffCircle(this.boss.x, this.boss.y, this.boss.radius + 4)) {
+        bubble.bounceInside(PLAYFIELD);
       }
     }
   }

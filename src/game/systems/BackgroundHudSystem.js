@@ -1,5 +1,5 @@
 import { COLORS, GAME_HEIGHT, GAME_WIDTH, PLAYFIELD } from "../constants.js";
-import { clamp, drawPixelLine, drawRect, drawText, lerp, rand, randInt, withAlpha } from "../utils.js";
+import { clamp, drawPixelLine, drawRect, lerp, rand, randInt, withAlpha } from "../utils.js";
 
 const DEFAULT_CONFIG = {
   fineCell: 20,
@@ -78,7 +78,6 @@ export class BackgroundHudSystem {
     this.drawDataPoints(ctx);
     this.drawScanLines(ctx, game);
     this.drawDataStrips(ctx);
-    this.drawDiagnostics(ctx);
     this.drawGlitch(ctx, game);
   }
 
@@ -304,19 +303,6 @@ export class BackgroundHudSystem {
 
       ctx.fillStyle = withAlpha(color, hot ? 0.5 : 0.24);
       ctx.fillRect(x + i * step, y + this.config.dataStripHeight - height, Math.max(2, step - 4), height);
-    }
-  }
-
-  drawDiagnostics(ctx) {
-    const x = 52;
-    const y = 56;
-
-    drawText(ctx, "DIAG", x, y, COLORS.muted, 11);
-    for (let i = 0; i < this.diagnostics.length; i += 1) {
-      const item = this.diagnostics[i];
-      const value = `${Math.round(item.value * 100).toString().padStart(2, "0")}%`;
-      const color = item.label === "ERR" && item.value > 0.08 ? COLORS.red : COLORS.muted;
-      drawText(ctx, `${item.label} ${value}`, x, y + 22 + i * 18, color, 10);
     }
   }
 
