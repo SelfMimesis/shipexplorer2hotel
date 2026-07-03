@@ -231,23 +231,26 @@ export class Hud {
     drawRect(ctx, x, y, w, h, COLORS.cyanDim, "rgba(42, 18, 54, 0.58)", 1);
     drawText(ctx, "STATUS", x + 18, y + 18, COLORS.cyan, 15);
 
-    this.drawMetricRow(ctx, "CTRL", ctrl, x + 18, y + 58);
-    this.drawMetricRow(ctx, "DATA", data, x + 18, y + 122);
-    this.drawMetricRow(ctx, "SYS", sys, x + 18, y + 186);
+    this.drawMetricRow(ctx, "CTRL", ctrl, x + 18, y + 56);
+    this.drawMetricRow(ctx, "DATA", data, x + 18, y + 116);
+    this.drawMetricRow(ctx, "SYS", sys, x + 18, y + 176);
 
-    this.drawBossBubblePenalty(ctx, game, x + 18, y + 264);
+    this.drawBossBubblePenalty(ctx, game, x + 18, y + 254);
 
-    drawText(ctx, "VECTOR", x + 18, y + 338, COLORS.muted, 11);
-    drawText(ctx, `${Math.round(game.ship.vx).toString().padStart(4, "0")}`, x + 18, y + 362, COLORS.white, 15);
-    drawText(ctx, `${Math.round(game.ship.vy).toString().padStart(4, "0")}`, x + 18, y + 388, COLORS.white, 15);
+    drawText(ctx, "VECTOR", x + 18, y + 342, COLORS.muted, 11);
+    drawText(ctx, "VX", x + 18, y + 366, COLORS.muted, 10);
+    drawText(ctx, `${Math.round(game.ship.vx).toString().padStart(4, "0")}`, x + 110, y + 362, COLORS.white, 15, "right");
+    drawText(ctx, "VY", x + 18, y + 392, COLORS.muted, 10);
+    drawText(ctx, `${Math.round(game.ship.vy).toString().padStart(4, "0")}`, x + 110, y + 388, COLORS.white, 15, "right");
 
-    drawText(ctx, "AUTO NAV", x + 18, y + 458, COLORS.muted, 13);
+    drawText(ctx, "AUTO NAV", x + 18, y + 474, COLORS.muted, 13);
   }
 
   drawBossBubblePenalty(ctx, game, x, y) {
     const progress = game.bossBubblePenaltyProgress ?? 0;
     const limit = game.bossBubblePenaltyLimit ?? 10;
-    drawText(ctx, `BOSS BUB ${progress}/${limit}`, x, y, COLORS.muted, 11);
+    drawText(ctx, "BOSS BUB", x, y, COLORS.muted, 10);
+    drawText(ctx, `${progress}/${limit}`, x + 92, y, COLORS.white, 10, "right");
 
     for (let i = 0; i < limit; i += 1) {
       const px = x + (i % 5) * 18;

@@ -190,6 +190,32 @@ export class Bubble {
     }
   }
 
+  bounceOffCircle(cx, cy, radius) {
+    if (this.popped || this.expired) return false;
+
+    const dx = this.x - cx;
+    const dy = this.y - cy;
+    const minDistance = radius + this.radius;
+    const distanceValue = Math.hypot(dx, dy);
+    if (distanceValue >= minDistance) return false;
+
+    const nx = distanceValue > 0.001 ? dx / distanceValue : -1;
+    const ny = distanceValue > 0.001 ? dy / distanceValue : 0;
+    this.x = cx + nx * minDistance;
+    this.y = cy + ny * minDistance;
+
+    const dot = this.vx * nx + this.vy * ny;
+    if (dot < 0) {
+      this.vx -= 2 * dot * nx;
+      this.vy -= 2 * dot * ny;
+    } else {
+      this.vx += nx * 18;
+      this.vy += ny * 18;
+    }
+
+    return true;
+  }
+
   containsPoint(x, y, extraRadius = 0) {
     if (this.popped || this.expired) return false;
     return distance(x, y, this.x, this.y) <= this.radius + extraRadius;

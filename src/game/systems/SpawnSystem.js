@@ -4,9 +4,9 @@ import { Bubble } from "../entities/Bubble.js";
 
 export const DIFFICULTIES = {
   CALM: {
-    spawnEvery: 1.5,
-    minSpawnEvery: 0.76,
-    maxBubbles: 7,
+    spawnEvery: 1.62,
+    minSpawnEvery: 0.84,
+    maxBubbles: 6,
     speedScale: 0.68,
     lifetimeScale: 1.35,
     radiusScale: 1.12,
@@ -15,9 +15,9 @@ export const DIFFICULTIES = {
     bonusEvery: 7,
   },
   NORMAL: {
-    spawnEvery: 1.12,
-    minSpawnEvery: 0.52,
-    maxBubbles: 10,
+    spawnEvery: 1.24,
+    minSpawnEvery: 0.6,
+    maxBubbles: 8,
     speedScale: 1,
     lifetimeScale: 1,
     radiusScale: 1,
@@ -26,9 +26,9 @@ export const DIFFICULTIES = {
     bonusEvery: 6,
   },
   OVERCLOCK: {
-    spawnEvery: 0.84,
-    minSpawnEvery: 0.34,
-    maxBubbles: 15,
+    spawnEvery: 0.94,
+    minSpawnEvery: 0.42,
+    maxBubbles: 13,
     speedScale: 1.28,
     lifetimeScale: 0.78,
     radiusScale: 0.88,
@@ -133,7 +133,7 @@ export class SpawnSystem {
 
   getMaxBubbles(elapsed) {
     const stage = Math.floor(elapsed / 10);
-    return this.preset.maxBubbles + Math.floor(stage / 3);
+    return this.preset.maxBubbles + Math.floor(stage / 4);
   }
 
   getRadius(type, elapsed) {
