@@ -103,6 +103,8 @@ export class Game {
     this.lastTapPoint = null;
     this.bossBubblePenaltyProgress = 0;
     this.bossBubblePenaltyLimit = GAME_RULES.bossBubblePenaltyLimit;
+    this.victoryPending = false;
+    this.victoryTimer = 0;
 
     this.bindInput();
     this.bindMotionPreference();
@@ -344,6 +346,8 @@ export class Game {
     this.lastTapPoint = null;
     this.bossBubblePenaltyLimit = GAME_RULES.bossBubblePenaltyLimit;
     this.bossBubblePenaltyProgress = 0;
+    this.victoryPending = false;
+    this.victoryTimer = 0;
     this.activePointers.clear();
     this.pointer.isDown = false;
     this.pointer.justPressed = false;
@@ -405,6 +409,8 @@ export class Game {
 
   winRun() {
     if (this.victory) return;
+    this.victoryPending = false;
+    this.victoryTimer = 0;
     this.score += 2500;
     this.endRun("HAS GANADO", true);
   }
@@ -466,7 +472,10 @@ export class Game {
     this.resolveShipBossBubbleCollisions();
     this.resolveShipBossCollision();
 
-    if (this.boss.explosionComplete) this.winRun();
+    if (this.victoryPending) {
+      this.victoryTimer = Math.max(0, this.victoryTimer - dt);
+      if (this.boss.explosionComplete || this.victoryTimer <= 0) this.winRun();
+    }
     if (this.state === GAME_STATES.PLAYING && this.timeLeft <= 0 && this.boss.active) this.endRun("TIMEOUT");
   }
 
@@ -624,6 +633,11 @@ export class Game {
       life: this.boss.defeated ? 0.95 : 0.48,
       glitch: this.boss.defeated,
     });
+
+    if (this.boss.defeated) {
+      this.victoryPending = true;
+      this.victoryTimer = this.boss.explosionLife + 0.18;
+    }
   }
 
   resolveShipBossCollision() {
