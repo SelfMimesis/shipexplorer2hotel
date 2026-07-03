@@ -935,7 +935,7 @@ export class Game {
       const end = start + Math.PI * 2 * alpha;
 
       drawPixelLine(ctx, bullet.prevX, bullet.prevY, bullet.x, bullet.y, COLORS.orange, alpha, 3);
-      drawRing(ctx, bullet.x, bullet.y, BULLET_RADIUS + 7, COLORS.amber, alpha * 0.72, 2, start, end);
+      drawRing(ctx, bullet.x, bullet.y, BULLET_RADIUS + 7, COLORS.orangeHot, alpha * 0.72, 2, start, end);
       ctx.fillStyle = withAlpha(COLORS.white, alpha);
       ctx.fillRect(Math.round(bullet.x) - 2, Math.round(bullet.y) - 2, 4, 4);
     }

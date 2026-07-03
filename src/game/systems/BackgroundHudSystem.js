@@ -100,6 +100,7 @@ export class BackgroundHudSystem {
           cx: x + cell * 0.5,
           cy: y + cell * 0.5,
           energy: 0,
+          roundness: 0,
           phase: (x * 0.013 + y * 0.017) % Math.PI,
         });
       }
@@ -140,6 +141,7 @@ export class BackgroundHudSystem {
       const target = Math.max(0, 1 - dist / radius);
       const pulse = Math.max(0, Math.sin(this.time * 2 + cell.phase)) * 0.08;
       cell.energy = lerp(cell.energy, clamp(target + pulse, 0, 1), ease);
+      cell.roundness = lerp(cell.roundness, target, ease);
     }
   }
 
@@ -163,7 +165,7 @@ export class BackgroundHudSystem {
           pos: horizontal ? randInt(PLAYFIELD.top, PLAYFIELD.bottom) : randInt(PLAYFIELD.left, PLAYFIELD.right),
           age: 0,
           life: this.reducedMotion ? 0.32 : rand(0.34, 0.68),
-          color: Math.random() > 0.18 ? COLORS.cyan : COLORS.amber,
+          color: Math.random() > 0.18 ? COLORS.cyan : COLORS.muted,
         });
       }
       this.scanTimer = this.reducedMotion ? 0.9 : 0.18;
@@ -221,13 +223,39 @@ export class BackgroundHudSystem {
       if (cell.energy < 0.025) continue;
 
       const alpha = cell.energy * this.config.cellGlowAlpha;
-      drawRect(ctx, cell.x + 1, cell.y + 1, cell.w - 2, cell.h - 2, null, withAlpha(COLORS.cyan, alpha), 1);
+      const radius = Math.min(cell.w, cell.h) * 0.48 * cell.roundness;
+      this.drawReactiveCell(ctx, cell.x + 1, cell.y + 1, cell.w - 2, cell.h - 2, radius, withAlpha(COLORS.cyan, alpha));
 
       if (cell.energy > 0.28) {
-        drawPixelLine(ctx, cell.x + 6, cell.y + 6, cell.x + 18, cell.y + 6, COLORS.cyan, alpha * 2.4);
-        drawPixelLine(ctx, cell.x + 6, cell.y + 6, cell.x + 6, cell.y + 18, COLORS.cyan, alpha * 2.4);
+        const tickAlpha = alpha * 2.4 * (1 - cell.roundness * 0.58);
+        drawPixelLine(ctx, cell.x + 6, cell.y + 6, cell.x + 18, cell.y + 6, COLORS.cyan, tickAlpha);
+        drawPixelLine(ctx, cell.x + 6, cell.y + 6, cell.x + 6, cell.y + 18, COLORS.cyan, tickAlpha);
       }
     }
+  }
+
+  drawReactiveCell(ctx, x, y, width, height, radius, fill) {
+    const ix = Math.round(x);
+    const iy = Math.round(y);
+    const iw = Math.round(width);
+    const ih = Math.round(height);
+    const r = clamp(Math.round(radius), 0, Math.min(iw, ih) * 0.5);
+
+    ctx.save();
+    ctx.fillStyle = fill;
+    ctx.beginPath();
+    ctx.moveTo(ix + r, iy);
+    ctx.lineTo(ix + iw - r, iy);
+    ctx.quadraticCurveTo(ix + iw, iy, ix + iw, iy + r);
+    ctx.lineTo(ix + iw, iy + ih - r);
+    ctx.quadraticCurveTo(ix + iw, iy + ih, ix + iw - r, iy + ih);
+    ctx.lineTo(ix + r, iy + ih);
+    ctx.quadraticCurveTo(ix, iy + ih, ix, iy + ih - r);
+    ctx.lineTo(ix, iy + r);
+    ctx.quadraticCurveTo(ix, iy, ix + r, iy);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
   }
 
   drawDataPoints(ctx) {
@@ -237,7 +265,7 @@ export class BackgroundHudSystem {
       const point = this.dataPoints[i];
       const blink = this.reducedMotion ? 0.28 : Math.max(0, Math.sin(point.phase));
       const alpha = point.hot ? 0.16 + blink * 0.22 : 0.08 + blink * 0.12;
-      const color = point.hot ? COLORS.amber : COLORS.cyan;
+      const color = point.hot ? COLORS.orange : COLORS.cyan;
 
       ctx.fillStyle = withAlpha(color, alpha);
       ctx.fillRect(point.x, point.y, point.hot ? 3 : 2, 2);
@@ -272,7 +300,7 @@ export class BackgroundHudSystem {
     for (let i = 0; i < blocks; i += 1) {
       const height = 2 + Math.round((Math.sin(motion * 2.2 + i * 0.61) * 0.5 + 0.5) * (this.config.dataStripHeight - 2));
       const hot = (i + Math.floor(this.time * 5)) % 17 === 0;
-      const color = hot ? COLORS.amber : COLORS.cyanDim;
+      const color = hot ? COLORS.orange : COLORS.cyanDim;
 
       ctx.fillStyle = withAlpha(color, hot ? 0.5 : 0.24);
       ctx.fillRect(x + i * step, y + this.config.dataStripHeight - height, Math.max(2, step - 4), height);

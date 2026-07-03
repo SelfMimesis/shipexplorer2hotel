@@ -135,19 +135,19 @@ export class Menu {
       drawText(ctx, this.text("credits-title", "CREDITS"), GAME_WIDTH / 2, 248, COLORS.white, 34, "center");
       drawText(ctx, this.text("credits-a", "DESIGN CODE AUDIO"), GAME_WIDTH / 2, 318, COLORS.cyan, 18, "center");
       drawText(ctx, this.text("credits-b", "SHIP EXPLORER HUD LAB"), GAME_WIDTH / 2, 356, COLORS.muted, 16, "center");
-      drawText(ctx, this.text("credits-c", "VANILLA CANVAS SYSTEM"), GAME_WIDTH / 2, 394, COLORS.amber, 16, "center");
+      drawText(ctx, this.text("credits-c", "VANILLA CANVAS SYSTEM"), GAME_WIDTH / 2, 394, COLORS.muted, 16, "center");
       return;
     }
 
     drawText(ctx, this.text("title", "DATA BUBBLE POP"), GAME_WIDTH / 2, 250, COLORS.white, 42, "center");
     drawText(ctx, this.text("subtitle", "CLICK TO CALIBRATE"), GAME_WIDTH / 2, 314, COLORS.cyan, 20, "center");
-    drawText(ctx, this.text("difficulty", `DIFFICULTY ${game.difficulty}`), GAME_WIDTH / 2, 354, COLORS.amber, 14, "center");
+    drawText(ctx, this.text("difficulty", `DIFFICULTY ${game.difficulty}`), GAME_WIDTH / 2, 354, COLORS.muted, 14, "center");
   }
 
   drawPaused(ctx, game) {
     this.drawOverlay(ctx, 0.62);
-    this.drawPanel(ctx, GAME_WIDTH / 2 - 280, 238, 560, 290, COLORS.amber);
-    drawText(ctx, this.text("paused", "PAUSED"), GAME_WIDTH / 2, 286, COLORS.amber, 42, "center");
+    this.drawPanel(ctx, GAME_WIDTH / 2 - 280, 238, 560, 290, COLORS.orange);
+    drawText(ctx, this.text("paused", "PAUSED"), GAME_WIDTH / 2, 286, COLORS.orange, 42, "center");
     drawText(ctx, this.text("pause-score", `SCORE ${formatScore(game.score)}`), GAME_WIDTH / 2, 324, COLORS.white, 16, "center");
   }
 
@@ -159,8 +159,8 @@ export class Menu {
 
   drawGameOver(ctx, game) {
     this.drawOverlay(ctx, 0.68);
-    const color = game.victory ? COLORS.amber : COLORS.red;
-    const detailColor = game.victory ? COLORS.amber : COLORS.red;
+    const color = game.victory ? COLORS.orange : COLORS.red;
+    const detailColor = game.victory ? COLORS.orange : COLORS.red;
     const title = game.victory ? "HAS GANADO" : "GAME OVER";
     this.drawPanel(ctx, GAME_WIDTH / 2 - 360, 190, 720, 430, color);
 
