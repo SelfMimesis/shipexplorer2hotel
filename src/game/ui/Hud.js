@@ -375,10 +375,6 @@ export class Hud {
       const trailStep = (i + wavePhase) % 9;
       const hot = trailStep === 0;
       const trailAlpha = trailStep > 0 && trailStep <= 3 ? 0.46 - trailStep * 0.1 : 0;
-      if (hot || trailAlpha > 0) {
-        ctx.fillStyle = withAlpha(COLORS.amber, hot ? 0.28 : trailAlpha);
-        ctx.fillRect(blockX - 3, y + 104 - height - 2, 15, height + 4);
-      }
       ctx.fillStyle = hot ? COLORS.amber : trailAlpha > 0 ? withAlpha(COLORS.amber, trailAlpha) : withAlpha(COLORS.cyan, 0.42);
       ctx.fillRect(blockX, y + 104 - height, 9, height);
     }
@@ -386,8 +382,8 @@ export class Hud {
     this.drawLives(ctx, game, x + 22, y + 68);
     this.drawBossStatus(ctx, game, x + 250, y + 58);
     this.drawTurboStatus(ctx, game, x + 520, y + 58);
-    drawText(ctx, "BUB", x + 686, y + 66, COLORS.muted, 10);
-    drawText(ctx, String(game.spawn.bubbles.length).padStart(2, "0"), x + 740, y + 62, COLORS.violetBright, 16, "right");
+    drawText(ctx, "BUB", x + 686, y + 58, COLORS.muted, 10);
+    drawText(ctx, String(game.spawn.bubbles.length).padStart(2, "0"), x + 740, y + 54, COLORS.violetBright, 16, "right");
   }
 
   drawLives(ctx, game, x, y) {
