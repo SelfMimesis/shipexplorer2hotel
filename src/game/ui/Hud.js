@@ -75,7 +75,7 @@ export class Hud {
     this.drawFrameGlow(ctx);
     this.drawMeasurementMarks(ctx);
     drawText(ctx, "BUBBLE FIELD // NAV MAP", PLAYFIELD.left + 20, PLAYFIELD.top - 38, COLORS.cyan, 18);
-    drawText(ctx, "RX-44 ONLINE", PLAYFIELD.right - 20, PLAYFIELD.top - 38, COLORS.muted, 16, "right");
+    drawText(ctx, "RX-44 ONLINE", PLAYFIELD.right - 20, PLAYFIELD.top - 38, COLORS.amber, 16, "right");
   }
 
   drawPanels(ctx, game) {
@@ -243,7 +243,7 @@ export class Hud {
     drawText(ctx, "VY", x + 18, y + 392, COLORS.muted, 10);
     drawText(ctx, `${Math.round(game.ship.vy).toString().padStart(4, "0")}`, x + 110, y + 388, COLORS.white, 15, "right");
 
-    drawText(ctx, "AUTO NAV", x + 18, y + 474, COLORS.muted, 13);
+    drawText(ctx, "AUTO NAV", x + 18, y + 474, COLORS.amber, 13);
   }
 
   drawBossBubblePenalty(ctx, game, x, y) {
@@ -291,13 +291,13 @@ export class Hud {
 
     drawRect(ctx, x - 14, y - 12, size + 28, 138, COLORS.cyanDim, "rgba(42, 18, 54, 0.44)", 1, 0.72);
     drawRect(ctx, x - 8, y - 6, size + 16, 126, withAlpha(COLORS.cyan, 0.42), null, 1);
-    drawPixelLine(ctx, x - 2, y + 6, x + 18, y + 6, COLORS.muted, 0.72);
-    drawPixelLine(ctx, x + size - 18, y + 112, x + size + 2, y + 112, COLORS.muted, 0.62);
+    drawPixelLine(ctx, x - 2, y + 6, x + 18, y + 6, COLORS.amber, 0.72);
+    drawPixelLine(ctx, x + size - 18, y + 112, x + size + 2, y + 112, COLORS.amber, 0.62);
 
     if (!reduced) {
       const glitch = Math.sin(t * 17) > 0.92 ? 2 : 0;
       this.drawLogoShape(ctx, path, x + glitch, y, scale, COLORS.red, 0.12);
-      this.drawLogoShape(ctx, path, x - glitch, y, scale, COLORS.muted, 0.1);
+      this.drawLogoShape(ctx, path, x - glitch, y, scale, COLORS.amber, 0.1);
     }
 
     this.drawLogoShape(ctx, path, x, y, scale, COLORS.cyan, alpha);
@@ -305,7 +305,7 @@ export class Hud {
 
     drawRing(ctx, centerX, centerY, 68 + (reduced ? 0 : Math.sin(t * 3.1) * 3), COLORS.cyanDim, 0.14 + proximity * 0.08, 1);
     drawText(ctx, "RIM", x + 42, y + 126, COLORS.cyan, 12, "center");
-    drawText(ctx, "PATCH", x + 76, y + 126, COLORS.muted, 12, "center");
+    drawText(ctx, "PATCH", x + 76, y + 126, COLORS.amber, 12, "center");
   }
 
   drawLogoShape(ctx, path, x, y, scale, color, alpha) {
@@ -331,21 +331,21 @@ export class Hud {
     const scanY = LOGO_SOURCE_Y + sweep * LOGO_SOURCE_H;
     ctx.fillStyle = withAlpha(COLORS.white, alpha * 0.26);
     ctx.fillRect(0, scanY - 8, LOGO_SOURCE_W, 6);
-    ctx.fillStyle = withAlpha(COLORS.muted, alpha * 0.2);
+    ctx.fillStyle = withAlpha(COLORS.amber, alpha * 0.2);
     ctx.fillRect(0, scanY + 2, LOGO_SOURCE_W, 12);
     ctx.restore();
   }
 
   drawMetricBar(ctx, label, value, x, y) {
     drawText(ctx, label, x, y, COLORS.muted, 12);
-    drawBar(ctx, x, y + 24, 92, 12, value, value > 0.78 ? COLORS.orange : COLORS.cyan);
+    drawBar(ctx, x, y + 24, 92, 12, value, value > 0.78 ? COLORS.amber : COLORS.cyan);
     drawText(ctx, formatPercent(value), x, y + 46, COLORS.white, 12);
   }
 
   drawMetricRow(ctx, label, value, x, y) {
     drawText(ctx, label, x, y, COLORS.muted, 11);
     drawText(ctx, formatPercent(value), x + 92, y, COLORS.white, 10, "right");
-    drawBar(ctx, x, y + 20, 92, 9, value, value > 0.78 ? COLORS.orange : COLORS.cyan);
+    drawBar(ctx, x, y + 20, 92, 9, value, value > 0.78 ? COLORS.amber : COLORS.cyan);
   }
 
   drawBottomPanel(ctx, game) {
@@ -359,28 +359,27 @@ export class Hud {
     drawText(ctx, "SCORE", x + 22, y + 18, COLORS.muted, 12);
     drawText(ctx, formatScore(game.score), x + 100, y + 14, COLORS.white, 19);
     drawText(ctx, "TIME", x + 258, y + 18, COLORS.muted, 12);
-    drawText(ctx, formatTime(game.timeLeft), x + 320, y + 14, COLORS.muted, 19);
+    drawText(ctx, formatTime(game.timeLeft), x + 320, y + 14, COLORS.amber, 19);
     drawText(ctx, "COMBO", x + 462, y + 18, COLORS.muted, 12);
     drawText(ctx, String(game.combo).padStart(2, "0"), x + 548, y + 14, COLORS.cyan, 19);
     drawText(ctx, "ACC", x + 640, y + 18, COLORS.muted, 12);
     drawText(ctx, formatPercent(game.accuracy), x + 698, y + 14, COLORS.white, 19);
-    drawText(ctx, "MAX", x + 820, y + 18, COLORS.muted, 12);
-    drawText(ctx, String(game.maxCombo).padStart(2, "0"), x + 878, y + 14, COLORS.cyan, 19);
+    drawText(ctx, "MAX", x + 750, y + 18, COLORS.muted, 12);
+    drawText(ctx, String(game.maxCombo).padStart(2, "0"), x + 808, y + 14, COLORS.cyan, 19);
 
     for (let i = 0; i < 38; i += 1) {
       const blockX = x + 22 + i * 16;
       const height = 3 + Math.round((Math.sin(t * 2.4 + i * 0.62) * 0.5 + 0.5) * 14);
       const hot = (i + Math.floor(t * 8)) % 9 === 0;
-      ctx.fillStyle = hot ? COLORS.orange : withAlpha(COLORS.cyan, 0.42);
+      ctx.fillStyle = hot ? COLORS.amber : withAlpha(COLORS.cyan, 0.42);
       ctx.fillRect(blockX, y + 104 - height, 9, height);
     }
 
     this.drawLives(ctx, game, x + 22, y + 68);
     this.drawBossStatus(ctx, game, x + 250, y + 70);
     this.drawTurboStatus(ctx, game, x + 520, y + 70);
-    drawText(ctx, `DIFF ${game.spawn.difficulty}`, x + 750, y + 70, COLORS.muted, 11);
-    drawText(ctx, `BUB ${String(game.spawn.bubbles.length).padStart(2, "0")}`, x + 750, y + 90, COLORS.white, 11);
-    drawText(ctx, `LEAK ${String(game.unstableLeaks).padStart(2, "0")}`, x + 850, y + 90, game.unstableLeaks > 0 ? COLORS.red : COLORS.muted, 11);
+    drawText(ctx, "BUB", x + 686, y + 78, COLORS.muted, 10);
+    drawText(ctx, String(game.spawn.bubbles.length).padStart(2, "0"), x + 740, y + 74, COLORS.violetBright, 16, "right");
   }
 
   drawLives(ctx, game, x, y) {
@@ -425,7 +424,7 @@ export class Hud {
 
     drawText(ctx, "TURBO", x, y, COLORS.muted, 11);
     drawBar(ctx, x + 72, y + 2, 120, 9, progress, color, withAlpha(COLORS.violet, 0.35));
-    drawText(ctx, active ? "ON" : ready ? "READY" : `${Math.ceil(cooldown)}S`, x + 208, y - 2, color, 12);
+    drawText(ctx, active ? "ON" : ready ? "READY" : `${Math.ceil(cooldown)}S`, x + 132, y - 2, color, 12, "center");
   }
 
   drawControlPad(ctx, game) {
@@ -526,6 +525,7 @@ export class Hud {
     drawPixelLine(ctx, centerX + 12, centerY, centerX + 24, centerY, color, ready ? 0.9 : 0.36);
     drawPixelLine(ctx, centerX, centerY - 24, centerX, centerY - 12, color, ready ? 0.9 : 0.36);
     drawPixelLine(ctx, centerX, centerY + 12, centerX, centerY + 24, color, ready ? 0.9 : 0.36);
+    drawText(ctx, ready ? "FIRE" : "LOAD", centerX, button.y + button.h + 14, ready ? COLORS.orange : COLORS.cyanDim, 10, "center");
   }
 
   drawBoot(ctx, game) {
@@ -539,13 +539,13 @@ export class Hud {
     this.drawDim(ctx, 0.18);
     drawText(ctx, "BUBBLE POP CORE", GAME_WIDTH / 2, 294, COLORS.white, 44, "center");
     drawText(ctx, "CLICK / TAP TO START", GAME_WIDTH / 2, 360, COLORS.cyan, 22, "center");
-    drawText(ctx, `DIFFICULTY ${game.difficulty}`, GAME_WIDTH / 2, 402, COLORS.muted, 16, "center");
+    drawText(ctx, `DIFFICULTY ${game.difficulty}`, GAME_WIDTH / 2, 402, COLORS.amber, 16, "center");
     drawText(ctx, "1 CALM  2 NORMAL  3 OVERCLOCK", GAME_WIDTH / 2, 434, COLORS.muted, 14, "center");
   }
 
   drawPause(ctx) {
     this.drawDim(ctx, 0.52);
-    drawText(ctx, "PAUSED", GAME_WIDTH / 2, 338, COLORS.orange, 48, "center");
+    drawText(ctx, "PAUSED", GAME_WIDTH / 2, 338, COLORS.amber, 48, "center");
     drawText(ctx, "ESC TO RESUME", GAME_WIDTH / 2, 402, COLORS.cyan, 20, "center");
   }
 
@@ -557,7 +557,7 @@ export class Hud {
 
   drawGameOver(ctx, game) {
     this.drawDim(ctx, 0.58);
-    const color = game.victory ? COLORS.orange : COLORS.red;
+    const color = game.victory ? COLORS.amber : COLORS.red;
     drawText(ctx, game.victory ? "HAS GANADO" : "GAME OVER", GAME_WIDTH / 2, 300, color, 46, "center");
     drawText(ctx, game.gameOverReason, GAME_WIDTH / 2, 360, color, 22, "center");
     drawText(ctx, `FINAL SCORE ${formatScore(game.score)}`, GAME_WIDTH / 2, 414, COLORS.white, 22, "center");

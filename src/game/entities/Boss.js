@@ -1,5 +1,5 @@
 import { COLORS, GAME_WIDTH, PLAYFIELD } from "../constants.js";
-import { clamp, drawBar, drawPixelLine, drawRing, drawText, rand, withAlpha } from "../utils.js";
+import { clamp, drawBar, drawPixelLine, drawRing, drawText, lerp, rand, withAlpha } from "../utils.js";
 
 const ASSET_SIZE = 360;
 const CORE_X = 211.6;
@@ -7,10 +7,13 @@ const CORE_Y = 180;
 const BOSS_SCALE = 0.92;
 const BOSS_RADIUS = 124;
 const CORE_RADIUS = 30;
-const MAX_HP = 20;
+const MAX_HP = 5;
 const PROJECTILE_LIFE = 7.8;
 const PROJECTILE_START = "#8830BF";
 const PROJECTILE_END = "#FF2F55";
+const FORMATION_PERIOD = 15;
+const FORMATION_WINDOW = 2.8;
+const FORMATION_HOLD = 0.7;
 
 const LAYERS = [
   { src: "assets/boss/CorpRim4.svg", speed: 0.34, alpha: 0.9, offset: 0 },
@@ -46,6 +49,11 @@ const mixHex = (from, to, amount) => {
   return `#${r}${g}${bl}`;
 };
 
+const smoothstep = (edge0, edge1, value) => {
+  const t = clamp((value - edge0) / (edge1 - edge0), 0, 1);
+  return t * t * (3 - 2 * t);
+};
+
 const makeImage = (src) => {
   if (typeof Image === "undefined") return null;
   const image = new Image();
@@ -57,7 +65,13 @@ const makeImage = (src) => {
 export class Boss {
   constructor({ reducedMotion = false } = {}) {
     this.reducedMotion = reducedMotion;
-    this.layers = LAYERS.map((layer) => ({ ...layer, image: makeImage(layer.src) }));
+    this.layers = LAYERS.map((layer, index) => ({
+      ...layer,
+      index,
+      image: makeImage(layer.src),
+      deformOffset: layer.offset,
+      deformTarget: layer.offset,
+    }));
     this.onProjectileExpire = null;
     this.reset();
   }
@@ -83,6 +97,9 @@ export class Boss {
     this.radius = BOSS_RADIUS;
     this.coreRadius = CORE_RADIUS;
     this.rotation = 0;
+    this.logoFormationTimer = 0;
+    this.logoFormationCycle = -1;
+    this.randomizeLayerDeformation();
     this.orbitPhase = 0;
     this.orbitBubbles = ORBIT_BLUEPRINTS.map((_, index) => {
       const bubble = this.createOrbitBubble(index);
@@ -108,6 +125,7 @@ export class Boss {
 
   update(dt, game) {
     this.rotation += dt * (this.reducedMotion ? 0.22 : 1);
+    this.updateLayerFormation(dt);
     this.orbitPhase += dt * (this.reducedMotion ? 0.18 : 0.72);
     this.hitFlash = Math.max(0, this.hitFlash - dt);
 
@@ -228,6 +246,45 @@ export class Boss {
     }
   }
 
+  randomizeLayerDeformation() {
+    for (const layer of this.layers) {
+      const direction = layer.index % 2 === 0 ? 1 : -1;
+      const drift = this.reducedMotion ? rand(0.05, 0.12) : rand(0.12, 0.42);
+      layer.deformTarget = layer.offset + direction * drift + rand(-0.1, 0.1);
+    }
+  }
+
+  updateLayerFormation(dt) {
+    this.logoFormationTimer += dt;
+    const cycle = Math.floor(this.logoFormationTimer / FORMATION_PERIOD);
+
+    if (cycle !== this.logoFormationCycle) {
+      this.logoFormationCycle = cycle;
+      this.randomizeLayerDeformation();
+    }
+
+    const ease = 1 - Math.pow(0.006, dt);
+    for (const layer of this.layers) {
+      layer.deformOffset = lerp(layer.deformOffset, layer.deformTarget, ease);
+    }
+  }
+
+  getFormationBlend() {
+    const phase = this.logoFormationTimer % FORMATION_PERIOD;
+    const distanceToFormation = Math.min(phase, FORMATION_PERIOD - phase);
+
+    if (distanceToFormation <= FORMATION_HOLD) return 1;
+    return 1 - smoothstep(FORMATION_HOLD, FORMATION_WINDOW, distanceToFormation);
+  }
+
+  getLayerRotation(layer) {
+    const formation = this.getFormationBlend();
+    const wobble = this.reducedMotion ? 0 : Math.sin(this.logoFormationTimer * (0.35 + Math.abs(layer.speed)) + layer.index * 1.7) * 0.08;
+    const deformed = this.rotation * layer.speed + layer.deformOffset + wobble;
+
+    return lerp(deformed, 0, formation);
+  }
+
   getOrbitBubblePosition(bubble) {
     const spiralPulse = Math.sin(this.orbitPhase * 2.1 + bubble.phase) * 3.5;
     const radius = bubble.radius + spiralPulse;
@@ -341,7 +398,7 @@ export class Boss {
     drawRing(ctx, this.x, this.y, this.radius - 12, COLORS.cyan, 0.13, 1);
 
     for (const layer of this.layers) {
-      const rotation = this.rotation * layer.speed + layer.offset;
+      const rotation = this.getLayerRotation(layer);
       ctx.save();
       ctx.translate(Math.round(this.x), Math.round(this.y));
       ctx.rotate(rotation);

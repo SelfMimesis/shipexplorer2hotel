@@ -93,7 +93,7 @@ export const BUBBLE_TYPES = [
 ];
 
 export const GAME_RULES = {
-  duration: 120,
+  duration: 300,
   lives: 3,
   bubbleLimit: 18,
   bossBubblePenaltyLimit: 10,
