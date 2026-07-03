@@ -17,9 +17,9 @@ const MAX_WS_PAYLOAD_BYTES = 2048;
 const MAX_WS_FRAME_BYTES = 4096;
 const STATE_PATH = path.join(__dirname, "state.json");
 const VIDEOS = {
-  video1: process.env.VIDEO_1_URL || "/videos/video1.mp4",
-  video2: process.env.VIDEO_2_URL || "/videos/video2.mp4",
-  video3: process.env.VIDEO_3_URL || "/videos/video3.mp4",
+  video1: process.env.VIDEO_1_URL || "/videos/01_sc9.06_PinLee_Tablet.mp4",
+  video2: process.env.VIDEO_2_URL || "/videos/02_B_sc9.06_PinLee_Tablet.mp4",
+  video3: process.env.VIDEO_3_URL || "/videos/03_B_sc9.06_PinLee_Tablet.mp4",
 };
 const VALID_VARIANTS = new Set(["info", "warning", "danger", "success"]);
 const VALID_VIDEO_IDS = new Set(Object.keys(VIDEOS));
