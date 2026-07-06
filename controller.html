@@ -470,6 +470,15 @@
         <div id="videoState" class="video-status" data-active="false">VIDEO: OFF</div>
       </div>
 
+      <div class="video-chapter" aria-labelledby="chapter4bVideoTitle">
+        <h3 id="chapter4bVideoTitle" class="video-chapter-title">CAPITULO 4B</h3>
+        <div class="controls">
+          <button id="chapter4bVideo1Button" type="button">VIDEO 1</button>
+          <button id="chapter4bVideo2Button" type="button">VIDEO 2</button>
+          <button id="chapter4bVideo3Button" type="button">VIDEO 3</button>
+        </div>
+      </div>
+
       <div class="video-chapter" aria-labelledby="chapter8VideoTitle">
         <h3 id="chapter8VideoTitle" class="video-chapter-title">CAPITULO 8</h3>
         <div class="controls">
@@ -549,6 +558,9 @@
     const hideButton = document.querySelector("#hideButton");
     const testButton = document.querySelector("#testButton");
     const videoState = document.querySelector("#videoState");
+    const chapter4bVideo1Button = document.querySelector("#chapter4bVideo1Button");
+    const chapter4bVideo2Button = document.querySelector("#chapter4bVideo2Button");
+    const chapter4bVideo3Button = document.querySelector("#chapter4bVideo3Button");
     const chapter8Video1Button = document.querySelector("#chapter8Video1Button");
     const chapter8Video2Button = document.querySelector("#chapter8Video2Button");
     const chapter8Video3Button = document.querySelector("#chapter8Video3Button");
@@ -575,7 +587,7 @@
     let reconnectAttempt = 0;
     let manualClose = false;
     let currentRemoteState = createEmptyRemoteState();
-    const commandButtons = [showButton, hideButton, testButton, chapter8Video1Button, chapter8Video2Button, chapter8Video3Button, video1Button, video2Button, video3Button, videoCloseButton, screenLockButton, screenUnlockButton];
+    const commandButtons = [showButton, hideButton, testButton, chapter4bVideo1Button, chapter4bVideo2Button, chapter4bVideo3Button, chapter8Video1Button, chapter8Video2Button, chapter8Video3Button, video1Button, video2Button, video3Button, videoCloseButton, screenLockButton, screenUnlockButton];
 
     socketUrl.textContent = wsUrl;
     restoreForm();
@@ -821,6 +833,9 @@
     function playVideo(videoId) {
       const token = tokenInput.value.trim();
       const labels = {
+        chapter4bVideo1: "capitulo 4b video 1 enviado",
+        chapter4bVideo2: "capitulo 4b video 2 enviado",
+        chapter4bVideo3: "capitulo 4b video 3 enviado",
         chapter8Video1: "capitulo 8 video 1 enviado",
         chapter8Video2: "capitulo 8 video 2 enviado",
         chapter8Video3: "capitulo 8 video 3 enviado",
@@ -944,6 +959,9 @@
     function getVideoLabel(state) {
       const video = state && state.video ? state.video : {};
       if (!video.visible) return "OFF";
+      if (video.id === "chapter4bVideo1") return "CAPITULO 4B / VIDEO 1";
+      if (video.id === "chapter4bVideo2") return "CAPITULO 4B / VIDEO 2";
+      if (video.id === "chapter4bVideo3") return "CAPITULO 4B / VIDEO 3";
       if (video.id === "chapter8Video1") return "CAPITULO 8 / VIDEO 1";
       if (video.id === "chapter8Video2") return "CAPITULO 8 / VIDEO 2";
       if (video.id === "chapter8Video3") return "CAPITULO 8 / VIDEO 3";
@@ -1070,6 +1088,9 @@
     showButton.addEventListener("click", () => showPopup());
     hideButton.addEventListener("click", hidePopup);
     testButton.addEventListener("click", sendTest);
+    chapter4bVideo1Button.addEventListener("click", () => playVideo("chapter4bVideo1"));
+    chapter4bVideo2Button.addEventListener("click", () => playVideo("chapter4bVideo2"));
+    chapter4bVideo3Button.addEventListener("click", () => playVideo("chapter4bVideo3"));
     chapter8Video1Button.addEventListener("click", () => playVideo("chapter8Video1"));
     chapter8Video2Button.addEventListener("click", () => playVideo("chapter8Video2"));
     chapter8Video3Button.addEventListener("click", () => playVideo("chapter8Video3"));
